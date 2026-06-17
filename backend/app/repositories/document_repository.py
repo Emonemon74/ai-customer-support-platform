@@ -26,3 +26,30 @@ class DocumentRepository:
         self.db.refresh(document)
 
         return document
+
+    def get_by_user(self, user_id: int) -> list[Document]:
+        return (
+            self.db.query(Document)
+            .filter(Document.uploaded_by == user_id)
+            .all()
+        )
+
+    def get_by_id(self, document_id: int) -> Document | None:
+        return (
+            self.db.query(Document)
+            .filter(Document.id == document_id)
+            .first()
+        )
+
+    def update_status(self, document: Document, status: str) -> Document:
+        document.status = status
+
+        self.db.add(document)
+        self.db.commit()
+        self.db.refresh(document)
+
+        return document
+
+    def delete(self, document: Document) -> None:
+        self.db.delete(document)
+        self.db.commit()
