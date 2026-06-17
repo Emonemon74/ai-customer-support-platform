@@ -115,6 +115,8 @@ class DocumentService:
 
         if os.path.exists(document.file_path):
             os.remove(document.file_path)
+            
+        VectorStore().delete_document(document.id)
 
         self.document_repository.delete(document)
 

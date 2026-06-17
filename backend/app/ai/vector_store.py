@@ -43,11 +43,20 @@ class VectorStore:
         )
 
 
-def store_chunks(
-    document_id: int,
-    chunks: list[str],
-) -> None:
-    VectorStore().add_document(
-        document_id=document_id,
-        chunks=chunks,
-    )
+    def store_chunks(
+        document_id: int,
+        chunks: list[str],
+    ) -> None:
+        VectorStore().add_document(
+            document_id=document_id,
+            chunks=chunks,
+        )
+
+
+    def delete_document(self, document_id: int):
+        ids = self.collection.get(
+            where={"document_id": document_id}
+        )["ids"]
+
+        if ids:
+            self.collection.delete(ids=ids)
