@@ -16,6 +16,9 @@ def ask(
     request: ChatRequest,
     current_user: User = Depends(get_current_user),
 ):
-    answer = ask_question(request.question)
+    result = ask_question(request.question)
 
-    return ChatResponse(answer=answer)
+    return ChatResponse(
+        answer=result["answer"],
+        sources=result["sources"],
+    )
