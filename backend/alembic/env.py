@@ -22,7 +22,8 @@ from app.models.document import Document
 from app.models.refresh_token import RefreshToken
 from app.db.base import Base
 from app.models.user import User
-
+from app.models.conversation import Conversation
+from app.models.message import Message
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

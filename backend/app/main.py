@@ -7,6 +7,7 @@ from app.core.exceptions.handlers import register_exception_handlers
 from app.core.settings import settings
 from app.api.v1.documents import router as documents_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.conversations import router as conversations_router
 
 
 app = FastAPI(
@@ -22,3 +23,4 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(documents_router)
 app.include_router(chat_router)
+app.include_router(conversations_router)
