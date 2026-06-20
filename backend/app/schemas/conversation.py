@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class ConversationCreateRequest(BaseModel):
-    title: str
+    question: str
 
 
 class ConversationResponse(BaseModel):

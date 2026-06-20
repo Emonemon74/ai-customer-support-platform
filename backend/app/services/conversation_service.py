@@ -4,6 +4,7 @@ from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
 from app.schemas.conversation import ConversationCreateRequest
+from app.ai.llm import generate_conversation_title
 
 
 class ConversationService:
@@ -17,8 +18,12 @@ class ConversationService:
         request: ConversationCreateRequest,
         current_user: User,
     ):
+        title = generate_conversation_title(
+            request.question
+        )
+
         return self.conversation_repository.create(
-            title=request.title,
+            title=title,
             user_id=current_user.id,
         )
 

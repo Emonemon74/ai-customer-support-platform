@@ -87,3 +87,30 @@ User Question:
 
         if content:
             yield content
+
+
+def generate_conversation_title(question: str) -> str:
+    prompt = f"""
+Generate a short conversation title for this user question.
+
+Rules:
+- Maximum 5 words
+- No quotation marks
+- Clear and professional
+
+Question:
+{question}
+"""
+
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "user",
+                "content": prompt,
+            }
+        ],
+        temperature=0,
+    )
+
+    return response.choices[0].message.content.strip()
