@@ -40,3 +40,23 @@ class ConversationService:
             raise ValueError("You are not authorized to access this conversation")
 
         return self.message_repository.get_by_conversation(conversation_id)
+    
+
+    def rename_conversation(
+        self,
+        conversation_id: int,
+        title: str,
+        current_user: User,
+    ):
+        conversation = self.conversation_repository.get_by_id(conversation_id)
+
+        if not conversation:
+            raise ValueError("Conversation not found")
+
+        if conversation.user_id != current_user.id:
+            raise ValueError("You are not authorized to rename this conversation")
+
+        return self.conversation_repository.update_title(
+            conversation=conversation,
+            title=title,
+        )

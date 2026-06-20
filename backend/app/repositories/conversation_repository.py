@@ -52,3 +52,17 @@ class ConversationRepository:
     ):
         self.db.delete(conversation)
         self.db.commit()
+
+
+    def update_title(
+        self,
+        conversation: Conversation,
+        title: str,
+    ) -> Conversation:
+        conversation.title = title
+
+        self.db.add(conversation)
+        self.db.commit()
+        self.db.refresh(conversation)
+
+        return conversation

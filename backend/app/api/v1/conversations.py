@@ -7,6 +7,7 @@ from app.models.user import User
 from app.schemas.conversation import (
     ConversationCreateRequest,
     ConversationResponse,
+    ConversationUpdateRequest,
     MessageResponse,
 )
 from app.services.conversation_service import ConversationService
@@ -52,6 +53,29 @@ def get_messages(
 ):
     try:
         return ConversationService(db).get_messages(conversation_id, current_user)
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        )
+    
+
+@router.patch(
+    "/{conversation_id}",
+    response_model=ConversationResponse,
+)
+def rename_conversation(
+    conversation_id: int,
+    request: ConversationUpdateRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return ConversationService(db).rename_conversation(
+            conversation_id=conversation_id,
+            title=request.title,
+            current_user=current_user,
+        )
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

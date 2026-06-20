@@ -7,6 +7,10 @@ class ConversationCreateRequest(BaseModel):
     question: str
 
 
+class ConversationUpdateRequest(BaseModel):
+    title: str
+
+
 class ConversationResponse(BaseModel):
     id: int
     title: str
