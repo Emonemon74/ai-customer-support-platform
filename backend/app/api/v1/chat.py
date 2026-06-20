@@ -44,7 +44,21 @@ def ask(
         content=request.question,
     )
 
-    result = ask_question(request.question)
+    history = message_repository.get_recent_messages(
+        request.conversation_id,
+    )
+
+    conversation_history = "\n".join(
+        [
+            f"{message.role}: {message.content}"
+            for message in reversed(history)
+        ]
+    )
+
+    result = ask_question(
+        question=request.question,
+        conversation_history=conversation_history,
+    )
 
     message_repository.create(
         conversation_id=request.conversation_id,

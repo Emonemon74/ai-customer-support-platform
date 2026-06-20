@@ -1,5 +1,6 @@
 from app.ai.llm import generate_answer
 from app.ai.retriever import retrieve_relevant_chunks
+from app.ai.llm import generate_answer, stream_answer
 
 
 def build_context(question: str):
@@ -10,15 +11,33 @@ def build_context(question: str):
     return context, metadatas
 
 
-def ask_question(question: str):
+def ask_question(
+    question: str,
+    conversation_history: str = "",
+):
     context, sources = build_context(question)
 
     answer = generate_answer(
         question=question,
         context=context,
+        conversation_history=conversation_history,
     )
 
     return {
         "answer": answer,
         "sources": sources,
     }
+
+
+def stream_question(
+    question: str,
+    conversation_history: str = "",
+):
+    context, sources = build_context(question)
+
+    for token in stream_answer(
+        question=question,
+        context=context,
+        conversation_history=conversation_history,
+    ):
+        yield token

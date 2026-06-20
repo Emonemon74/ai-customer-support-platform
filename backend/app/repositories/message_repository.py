@@ -36,3 +36,17 @@ class MessageRepository:
             .order_by(Message.created_at.asc())
             .all()
         )
+    
+
+    def get_recent_messages(
+        self,
+        conversation_id: int,
+        limit: int = 10,
+    ):
+        return (
+            self.db.query(Message)
+            .filter(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at.desc())
+            .limit(limit)
+            .all()
+        )
