@@ -50,3 +50,15 @@ class MessageRepository:
             .limit(limit)
             .all()
         )
+    
+
+
+    def delete_by_conversation(
+        self,
+        conversation_id: int,
+    ) -> None:
+        self.db.query(Message).filter(
+            Message.conversation_id == conversation_id
+        ).delete()
+
+        self.db.commit()

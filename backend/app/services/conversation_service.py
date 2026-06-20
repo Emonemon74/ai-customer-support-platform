@@ -60,3 +60,31 @@ class ConversationService:
             conversation=conversation,
             title=title,
         )
+    
+
+    def delete_conversation(
+        self,
+        conversation_id: int,
+        current_user: User,
+   ):
+        conversation = self.conversation_repository.get_by_id(
+            conversation_id
+       )
+
+        if not conversation:
+            raise ValueError("Conversation not found")
+
+        if conversation.user_id != current_user.id:
+            raise ValueError(
+                "You are not authorized to delete this conversation"
+           )
+
+        self.message_repository.delete_by_conversation(
+            conversation_id
+        )
+
+        self.conversation_repository.delete(conversation)
+
+        return {
+            "message": "Conversation deleted successfully"
+       }

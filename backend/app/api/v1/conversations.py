@@ -81,3 +81,23 @@ def rename_conversation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
         )
+    
+
+@router.delete(
+    "/{conversation_id}",
+)
+def delete_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    try:
+        return ConversationService(db).delete_conversation(
+            conversation_id=conversation_id,
+            current_user=current_user,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        )
