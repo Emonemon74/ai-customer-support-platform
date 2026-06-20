@@ -1,6 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
+from app.core.exceptions.conversation import (
+    ConversationAccessDeniedError,
+    ConversationDeleteDeniedError,
+    ConversationNotFoundError,
+    ConversationRenameDeniedError,
+)
 from app.db.deps import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -67,11 +73,19 @@ def get_messages(
     current_user: User = Depends(get_current_user),
 ):
     try:
-        return ConversationService(db).get_messages(conversation_id, current_user)
-    except ValueError as error:
+        return ConversationService(db).get_messages(
+            conversation_id,
+            current_user,
+        )
+    except ConversationNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(error),
+            detail=error.message,
+        )
+    except ConversationAccessDeniedError as error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=error.message,
         )
 
 
@@ -91,10 +105,15 @@ def rename_conversation(
             title=request.title,
             current_user=current_user,
         )
-    except ValueError as error:
+    except ConversationNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(error),
+            detail=error.message,
+        )
+    except ConversationRenameDeniedError as error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=error.message,
         )
 
 
@@ -111,8 +130,13 @@ def delete_conversation(
             conversation_id=conversation_id,
             current_user=current_user,
         )
-    except ValueError as error:
+    except ConversationNotFoundError as error:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=str(error),
+            detail=error.message,
+        )
+    except ConversationDeleteDeniedError as error:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=error.message,
         )

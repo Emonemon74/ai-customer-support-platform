@@ -1,10 +1,16 @@
 from sqlalchemy.orm import Session
 
+from app.ai.llm import generate_conversation_title
+from app.core.exceptions.conversation import (
+    ConversationAccessDeniedError,
+    ConversationDeleteDeniedError,
+    ConversationNotFoundError,
+    ConversationRenameDeniedError,
+)
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
 from app.schemas.conversation import ConversationCreateRequest
-from app.ai.llm import generate_conversation_title
 
 
 class ConversationService:
@@ -18,9 +24,7 @@ class ConversationService:
         request: ConversationCreateRequest,
         current_user: User,
     ):
-        title = generate_conversation_title(
-            request.question
-        )
+        title = generate_conversation_title(request.question)
 
         return self.conversation_repository.create(
             title=title,
@@ -30,17 +34,20 @@ class ConversationService:
     def list_conversations(self, current_user: User):
         return self.conversation_repository.get_by_user(current_user.id)
 
-    def get_messages(self, conversation_id: int, current_user: User):
+    def get_messages(
+        self,
+        conversation_id: int,
+        current_user: User,
+    ):
         conversation = self.conversation_repository.get_by_id(conversation_id)
 
         if not conversation:
-            raise ValueError("Conversation not found")
+            raise ConversationNotFoundError()
 
         if conversation.user_id != current_user.id:
-            raise ValueError("You are not authorized to access this conversation")
+            raise ConversationAccessDeniedError()
 
         return self.message_repository.get_by_conversation(conversation_id)
-    
 
     def rename_conversation(
         self,
@@ -51,45 +58,35 @@ class ConversationService:
         conversation = self.conversation_repository.get_by_id(conversation_id)
 
         if not conversation:
-            raise ValueError("Conversation not found")
+            raise ConversationNotFoundError()
 
         if conversation.user_id != current_user.id:
-            raise ValueError("You are not authorized to rename this conversation")
+            raise ConversationRenameDeniedError()
 
         return self.conversation_repository.update_title(
             conversation=conversation,
             title=title,
         )
-    
 
     def delete_conversation(
         self,
         conversation_id: int,
         current_user: User,
-   ):
-        conversation = self.conversation_repository.get_by_id(
-            conversation_id
-       )
+    ):
+        conversation = self.conversation_repository.get_by_id(conversation_id)
 
         if not conversation:
-            raise ValueError("Conversation not found")
+            raise ConversationNotFoundError()
 
         if conversation.user_id != current_user.id:
-            raise ValueError(
-                "You are not authorized to delete this conversation"
-           )
+            raise ConversationDeleteDeniedError()
 
-        self.message_repository.delete_by_conversation(
-            conversation_id
-        )
-
+        self.message_repository.delete_by_conversation(conversation_id)
         self.conversation_repository.delete(conversation)
 
         return {
             "message": "Conversation deleted successfully"
-       }
-    
-
+        }
 
     def search_conversations(
         self,
