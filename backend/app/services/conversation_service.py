@@ -88,3 +88,15 @@ class ConversationService:
         return {
             "message": "Conversation deleted successfully"
        }
+    
+
+
+    def search_conversations(
+        self,
+        query: str,
+        current_user: User,
+    ):
+        return self.conversation_repository.search_by_title(
+            user_id=current_user.id,
+            query=query,
+        )

@@ -43,6 +43,21 @@ def list_conversations(
 
 
 @router.get(
+    "/search",
+    response_model=list[ConversationResponse],
+)
+def search_conversations(
+    q: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return ConversationService(db).search_conversations(
+        query=q,
+        current_user=current_user,
+    )
+
+
+@router.get(
     "/{conversation_id}/messages",
     response_model=list[MessageResponse],
 )
@@ -58,7 +73,7 @@ def get_messages(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
         )
-    
+
 
 @router.patch(
     "/{conversation_id}",
@@ -81,7 +96,7 @@ def rename_conversation(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
         )
-    
+
 
 @router.delete(
     "/{conversation_id}",

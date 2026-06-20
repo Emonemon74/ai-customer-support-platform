@@ -66,3 +66,18 @@ class ConversationRepository:
         self.db.refresh(conversation)
 
         return conversation
+    
+
+
+    def search_by_title(
+        self,
+        user_id: int,
+        query: str,
+    ):
+        return (
+            self.db.query(Conversation)
+            .filter(Conversation.user_id == user_id)
+            .filter(Conversation.title.ilike(f"%{query}%"))
+            .order_by(Conversation.created_at.desc())
+            .all()
+        )
