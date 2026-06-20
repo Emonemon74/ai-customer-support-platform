@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from fastapi.responses import StreamingResponse
 
-from app.ai.rag import ask_question
+from app.ai.rag import ask_question, stream_question
 from app.db.deps import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -69,4 +70,65 @@ def ask(
     return ChatResponse(
         answer=result["answer"],
         sources=result["sources"],
+    )
+
+
+
+@router.post("/stream")
+def stream_chat(
+    request: ChatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    conversation_repository = ConversationRepository(db)
+    message_repository = MessageRepository(db)
+
+    conversation = conversation_repository.get_by_id(request.conversation_id)
+
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found",
+        )
+
+    if conversation.user_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to access this conversation",
+        )
+
+    message_repository.create(
+        conversation_id=request.conversation_id,
+        role="USER",
+        content=request.question,
+    )
+
+    history = message_repository.get_recent_messages(request.conversation_id)
+
+    conversation_history = "\n".join(
+        [
+            f"{message.role}: {message.content}"
+            for message in reversed(history)
+        ]
+    )
+
+    def generate():
+        full_answer = ""
+
+        for token in stream_question(
+            question=request.question,
+            conversation_history=conversation_history,
+        ):
+            full_answer += token
+            yield token
+
+        message_repository.create(
+            conversation_id=request.conversation_id,
+            role="ASSISTANT",
+            content=full_answer,
+        )
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/plain",
     )
