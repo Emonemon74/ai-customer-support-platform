@@ -1,12 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
-from app.core.exceptions.conversation import (
-    ConversationAccessDeniedError,
-    ConversationDeleteDeniedError,
-    ConversationNotFoundError,
-    ConversationRenameDeniedError,
-)
 from app.db.deps import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -24,11 +18,7 @@ router = APIRouter(
 )
 
 
-@router.post(
-    "",
-    response_model=ConversationResponse,
-    status_code=status.HTTP_201_CREATED,
-)
+@router.post("", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
 def create_conversation(
     request: ConversationCreateRequest,
     db: Session = Depends(get_db),
@@ -37,10 +27,7 @@ def create_conversation(
     return ConversationService(db).create_conversation(request, current_user)
 
 
-@router.get(
-    "",
-    response_model=list[ConversationResponse],
-)
+@router.get("", response_model=list[ConversationResponse])
 def list_conversations(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -48,10 +35,7 @@ def list_conversations(
     return ConversationService(db).list_conversations(current_user)
 
 
-@router.get(
-    "/search",
-    response_model=list[ConversationResponse],
-)
+@router.get("/search", response_model=list[ConversationResponse])
 def search_conversations(
     q: str,
     db: Session = Depends(get_db),
@@ -63,80 +47,36 @@ def search_conversations(
     )
 
 
-@router.get(
-    "/{conversation_id}/messages",
-    response_model=list[MessageResponse],
-)
+@router.get("/{conversation_id}/messages", response_model=list[MessageResponse])
 def get_messages(
     conversation_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    try:
-        return ConversationService(db).get_messages(
-            conversation_id,
-            current_user,
-        )
-    except ConversationNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error.message,
-        )
-    except ConversationAccessDeniedError as error:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error.message,
-        )
+    return ConversationService(db).get_messages(conversation_id, current_user)
 
 
-@router.patch(
-    "/{conversation_id}",
-    response_model=ConversationResponse,
-)
+@router.patch("/{conversation_id}", response_model=ConversationResponse)
 def rename_conversation(
     conversation_id: int,
     request: ConversationUpdateRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    try:
-        return ConversationService(db).rename_conversation(
-            conversation_id=conversation_id,
-            title=request.title,
-            current_user=current_user,
-        )
-    except ConversationNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error.message,
-        )
-    except ConversationRenameDeniedError as error:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error.message,
-        )
+    return ConversationService(db).rename_conversation(
+        conversation_id=conversation_id,
+        title=request.title,
+        current_user=current_user,
+    )
 
 
-@router.delete(
-    "/{conversation_id}",
-)
+@router.delete("/{conversation_id}")
 def delete_conversation(
     conversation_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    try:
-        return ConversationService(db).delete_conversation(
-            conversation_id=conversation_id,
-            current_user=current_user,
-        )
-    except ConversationNotFoundError as error:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error.message,
-        )
-    except ConversationDeleteDeniedError as error:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=error.message,
-        )
+    return ConversationService(db).delete_conversation(
+        conversation_id=conversation_id,
+        current_user=current_user,
+    )
