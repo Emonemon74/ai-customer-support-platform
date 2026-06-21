@@ -133,9 +133,27 @@ export function ChatWindow({
                   </div>
 
                   <div
-                    className={`prose prose-sm max-w-none leading-7 prose-pre:m-0 prose-pre:p-0 prose-code:before:content-none prose-code:after:content-none ${
-                      isUser ? "prose-invert" : "prose-slate"
-                    }`}
+                    className={`prose prose-sm max-w-none leading-7
+                      prose-headings:mb-3 prose-headings:mt-4 prose-headings:font-bold prose-headings:text-slate-900
+                      prose-h1:text-xl prose-h2:text-lg prose-h3:text-base
+                      prose-p:my-3 prose-p:leading-7
+                      prose-ul:my-3 prose-ul:list-disc prose-ul:pl-6
+                      prose-ol:my-3 prose-ol:list-decimal prose-ol:pl-6
+                      prose-li:my-1
+                      prose-blockquote:my-4 prose-blockquote:rounded-r-lg prose-blockquote:border-l-4 prose-blockquote:border-slate-300 prose-blockquote:bg-slate-50 prose-blockquote:px-4 prose-blockquote:py-2 prose-blockquote:text-slate-600 prose-blockquote:not-italic
+                      prose-table:my-4 prose-table:w-full prose-table:border-collapse
+                      prose-th:border prose-th:border-slate-300 prose-th:bg-slate-100 prose-th:px-3 prose-th:py-2 prose-th:text-left
+                      prose-td:border prose-td:border-slate-200 prose-td:px-3 prose-td:py-2
+                      prose-a:font-medium prose-a:text-blue-600 prose-a:no-underline hover:prose-a:underline
+                      prose-strong:text-slate-900
+                      prose-code:rounded prose-code:bg-slate-100 prose-code:px-1.5 prose-code:py-0.5 prose-code:text-sm prose-code:font-medium prose-code:text-pink-700
+                      prose-pre:m-0 prose-pre:p-0
+                      prose-code:before:content-none prose-code:after:content-none
+                      ${
+                        isUser
+                          ? "prose-invert prose-headings:text-white prose-strong:text-white prose-code:bg-slate-800 prose-code:text-slate-100"
+                          : "prose-slate"
+                      }`}
                   >
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
@@ -149,7 +167,7 @@ export function ChatWindow({
 
                           if (match) {
                             return (
-                              <div className="group/code relative my-3 overflow-hidden rounded-xl border border-slate-700 bg-slate-950">
+                              <div className="group/code relative my-4 overflow-hidden rounded-xl border border-slate-700 bg-slate-950 shadow-sm">
                                 <div className="flex items-center justify-between border-b border-slate-700 bg-slate-900 px-4 py-2">
                                   <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
                                     {match[1]}
