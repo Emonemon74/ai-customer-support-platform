@@ -1,10 +1,15 @@
 import { useEffect, useState } from "react";
+
 import { DocumentUpload } from "../document/DocumentUpload";
+import { Pencil, Trash2, Plus } from "lucide-react";
 
 import {
   createConversation,
-  type Conversation,
   getConversations,
+  renameConversation,
+  searchConversations,
+  deleteConversation,
+  type Conversation,
 } from "../../services/conversation.service";
 
 type SidebarProps = {
@@ -18,10 +23,31 @@ export function Sidebar({
 }: SidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
 
   async function loadConversations() {
-    const data = await getConversations();
-    setConversations(data);
+    try {
+      const data = await getConversations();
+      setConversations(data);
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function handleSearch(value: string) {
+    setSearch(value);
+
+    try {
+      if (!value.trim()) {
+        await loadConversations();
+        return;
+      }
+
+      const data = await searchConversations(value);
+      setConversations(data);
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   async function handleNewChat() {
@@ -29,11 +55,60 @@ export function Sidebar({
 
     if (!question) return;
 
-    const conversation = await createConversation(question);
+    try {
+      const conversation = await createConversation(question);
 
-    setConversations((current) => [conversation, ...current]);
-    onSelectConversation(conversation);
+      setConversations((current) => [conversation, ...current]);
+
+      onSelectConversation(conversation);
+    } catch (error) {
+      console.error(error);
+    }
   }
+
+  async function handleRename(conversation: Conversation) {
+    const title = prompt(
+      "Enter new conversation title:",
+      conversation.title
+    );
+
+    if (!title || title.trim() === "") {
+      return;
+    }
+
+    try {
+      const updated = await renameConversation(
+        conversation.id,
+        title
+      );
+
+      setConversations((current) =>
+        current.map((item) =>
+          item.id === updated.id ? updated : item
+        )
+      );
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
+  async function handleDelete(conversation: Conversation) {
+  const confirmed = confirm(
+    `Delete "${conversation.title}"?`
+  );
+
+  if (!confirmed) return;
+
+  try {
+    await deleteConversation(conversation.id);
+
+    setConversations((current) =>
+      current.filter((item) => item.id !== conversation.id)
+    );
+  } catch (error) {
+    console.error(error);
+  }
+}
 
   useEffect(() => {
     async function load() {
@@ -48,39 +123,79 @@ export function Sidebar({
   }, []);
 
   return (
-    <aside className="w-72 border-r border-slate-200 bg-white p-4">
+    <aside className="flex w-72 flex-col border-r border-slate-200 bg-white p-4">
       <button
         onClick={handleNewChat}
-        className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white"
+        className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
       >
-        + New Chat
+       <span className="flex items-center justify-center gap-2">
+        <Plus size={16} />
+        New Chat
+        </span>
       </button>
+
       <DocumentUpload />
 
-      <div className="mt-6">
-        <p className="text-xs font-semibold uppercase text-slate-500">
+      <input
+        value={search}
+        onChange={(event) => handleSearch(event.target.value)}
+        placeholder="Search conversations..."
+        className="mt-4 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm outline-none focus:border-slate-900"
+      />
+
+      <div className="mt-6 flex-1 overflow-y-auto">
+        <p className="mb-3 text-xs font-semibold uppercase text-slate-500">
           Conversations
         </p>
 
-        <div className="mt-3 space-y-2">
-          {loading && <p className="text-sm text-slate-500">Loading...</p>}
+        {loading && (
+          <p className="text-sm text-slate-500">
+            Loading...
+          </p>
+        )}
 
-          {!loading && conversations.length === 0 && (
-            <p className="text-sm text-slate-500">No conversations yet.</p>
-          )}
+        {!loading && conversations.length === 0 && (
+          <p className="text-sm text-slate-500">
+            No conversations found.
+          </p>
+        )}
 
+        <div className="space-y-2">
           {conversations.map((conversation) => (
-            <button
+            <div
               key={conversation.id}
-              onClick={() => onSelectConversation(conversation)}
-              className={`w-full rounded-lg px-3 py-2 text-left text-sm ${
+              className={`flex items-center gap-2 rounded-lg px-3 py-2 transition ${
                 selectedConversationId === conversation.id
                   ? "bg-slate-900 text-white"
                   : "bg-slate-100 text-slate-800 hover:bg-slate-200"
               }`}
             >
-              {conversation.title}
-            </button>
+              <button
+                onClick={() =>
+                  onSelectConversation(conversation)
+                }
+                className="flex-1 text-left text-sm"
+              >
+                {conversation.title}
+              </button>
+
+              <button
+                onClick={() =>
+                  handleRename(conversation)
+                }
+                className="text-sm hover:scale-110"
+                title="Rename"
+              >
+                <Pencil size={16} />
+                <button
+                    onClick={() => handleDelete(conversation)}
+                    className="text-sm hover:scale-110"
+                    title="Delete"
+                >
+                    <Trash2 size={16} />
+                </button>
+              </button>
+            </div>
           ))}
         </div>
       </div>

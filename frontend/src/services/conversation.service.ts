@@ -20,3 +20,30 @@ export async function createConversation(question: string) {
 
   return response.data;
 }
+
+
+export async function searchConversations(query: string) {
+  const response = await api.get<Conversation[]>(
+    `/api/v1/conversations/search?q=${query}`
+  );
+
+  return response.data;
+}
+
+
+export async function renameConversation(
+  conversationId: number,
+  title: string
+) {
+  const response = await api.patch<Conversation>(
+    `/api/v1/conversations/${conversationId}`,
+    { title }
+  );
+
+  return response.data;
+}
+
+
+export async function deleteConversation(conversationId: number) {
+  await api.delete(`/api/v1/conversations/${conversationId}`);
+}
