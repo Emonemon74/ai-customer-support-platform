@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { DocumentUpload } from "../document/DocumentUpload";
 
 import {
   createConversation,
@@ -54,6 +55,7 @@ export function Sidebar({
       >
         + New Chat
       </button>
+      <DocumentUpload />
 
       <div className="mt-6">
         <p className="text-xs font-semibold uppercase text-slate-500">
