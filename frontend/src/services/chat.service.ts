@@ -10,7 +10,10 @@ export type ChatResponse = {
   sources: Source[];
 };
 
-export async function askQuestion(conversationId: number, question: string) {
+export async function askQuestion(
+  conversationId: number,
+  question: string
+) {
   const response = await api.post<ChatResponse>("/api/v1/chat/ask", {
     conversation_id: conversationId,
     question,
@@ -18,7 +21,6 @@ export async function askQuestion(conversationId: number, question: string) {
 
   return response.data;
 }
-
 
 export async function streamQuestion(
   conversationId: number,
@@ -39,6 +41,10 @@ export async function streamQuestion(
     }),
   });
 
+  if (!response.ok) {
+    throw new Error("Streaming request failed");
+  }
+
   if (!response.body) {
     throw new Error("No response body");
   }
@@ -46,12 +52,23 @@ export async function streamQuestion(
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
 
+  let buffer = "";
+
   while (true) {
     const { done, value } = await reader.read();
 
     if (done) break;
 
-    const chunk = decoder.decode(value);
-    onToken(chunk);
+    buffer += decoder.decode(value, { stream: true });
+
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() || "";
+
+    for (const part of parts) {
+      if (part.startsWith("data: ")) {
+        const token = part.replace("data: ", "");
+        onToken(token);
+      }
+    }
   }
 }

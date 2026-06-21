@@ -1,4 +1,6 @@
 import { ChatInput } from "./ChatInput";
+import { SourceCitations } from "./SourceCitations";
+import type { Source } from "../../services/chat.service";
 import type { Message } from "../../services/message.service";
 
 type ChatWindowProps = {
@@ -6,6 +8,7 @@ type ChatWindowProps = {
   messages: Message[];
   disabled?: boolean;
   onSend: (question: string) => Promise<void>;
+  sources: Source[];
 };
 
 export function ChatWindow({
@@ -13,6 +16,7 @@ export function ChatWindow({
   messages,
   disabled,
   onSend,
+  sources,
 }: ChatWindowProps) {
   return (
     <main className="flex flex-1 flex-col bg-slate-100">
@@ -55,6 +59,8 @@ export function ChatWindow({
           ))
         )}
       </div>
+
+      <SourceCitations sources={sources} />
 
       <ChatInput disabled={disabled} onSend={onSend} />
     </main>

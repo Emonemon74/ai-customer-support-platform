@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ChatWindow } from "../../components/chat/ChatWindow";
 import { Header } from "../../components/layout/Header";
 import { Sidebar } from "../../components/layout/Sidebar";
-import { streamQuestion } from "../../services/chat.service";
+import { askQuestion, type Source } from "../../services/chat.service";
 import type { Conversation } from "../../services/conversation.service";
 import { getMessages, type Message } from "../../services/message.service";
 
@@ -12,10 +12,12 @@ export function DashboardPage() {
     useState<Conversation>();
 
   const [messages, setMessages] = useState<Message[]>([]);
+  const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
 
   async function handleSelectConversation(conversation: Conversation) {
     setSelectedConversation(conversation);
+    setSources([]);
 
     try {
       const data = await getMessages(conversation.id);
@@ -30,47 +32,18 @@ export function DashboardPage() {
 
     setLoading(true);
 
-    const userMessage: Message = {
-      id: Date.now(),
-      conversation_id: selectedConversation.id,
-      role: "USER",
-      content: question,
-      created_at: new Date().toISOString(),
-    };
-
-    const assistantMessage: Message = {
-      id: Date.now() + 1,
-      conversation_id: selectedConversation.id,
-      role: "ASSISTANT",
-      content: "",
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((current) => [
-      ...current,
-      userMessage,
-      assistantMessage,
-    ]);
-
     try {
-      await streamQuestion(
+      const response = await askQuestion(
         selectedConversation.id,
-        question,
-        (token) => {
-          setMessages((current) =>
-            current.map((message) =>
-              message.id === assistantMessage.id
-                ? {
-                    ...message,
-                    content: message.content + token,
-                  }
-                : message
-            )
-          );
-        }
+        question
       );
 
-      const updatedMessages = await getMessages(selectedConversation.id);
+      setSources(response.sources);
+
+      const updatedMessages = await getMessages(
+        selectedConversation.id
+      );
+
       setMessages(updatedMessages);
     } catch (error) {
       console.error(error);
@@ -94,6 +67,7 @@ export function DashboardPage() {
           messages={messages}
           disabled={!selectedConversation || loading}
           onSend={handleSend}
+          sources={sources}
         />
       </div>
     </div>
