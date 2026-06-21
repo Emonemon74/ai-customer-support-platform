@@ -10,6 +10,19 @@ export type ChatResponse = {
   sources: Source[];
 };
 
+export type StreamEvent =
+  | {
+      type: "token";
+      content: string;
+    }
+  | {
+      type: "done";
+    }
+  | {
+      type: "error";
+      message: string;
+    };
+
 export async function askQuestion(
   conversationId: number,
   question: string
@@ -61,13 +74,28 @@ export async function streamQuestion(
 
     buffer += decoder.decode(value, { stream: true });
 
-    const parts = buffer.split("\n\n");
-    buffer = parts.pop() || "";
+    const events = buffer.split("\n\n");
+    buffer = events.pop() || "";
 
-    for (const part of parts) {
-      if (part.startsWith("data: ")) {
-        const token = part.replace("data: ", "");
-        onToken(token);
+    for (const event of events) {
+      if (!event.startsWith("data: ")) continue;
+
+      const rawData = event.replace("data: ", "").trim();
+
+      if (!rawData) continue;
+
+      const parsedEvent = JSON.parse(rawData) as StreamEvent;
+
+      if (parsedEvent.type === "token") {
+        onToken(parsedEvent.content);
+      }
+
+      if (parsedEvent.type === "error") {
+        throw new Error(parsedEvent.message);
+      }
+
+      if (parsedEvent.type === "done") {
+        return;
       }
     }
   }

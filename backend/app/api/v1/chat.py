@@ -1,6 +1,8 @@
+import json
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
 from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
 
 from app.ai.rag import ask_question, stream_question
 from app.db.deps import get_db
@@ -45,15 +47,10 @@ def ask(
         content=request.question,
     )
 
-    history = message_repository.get_recent_messages(
-        request.conversation_id,
-    )
+    history = message_repository.get_recent_messages(request.conversation_id)
 
     conversation_history = "\n".join(
-        [
-            f"{message.role}: {message.content}"
-            for message in reversed(history)
-        ]
+        [f"{message.role}: {message.content}" for message in reversed(history)]
     )
 
     result = ask_question(
@@ -71,7 +68,6 @@ def ask(
         answer=result["answer"],
         sources=result["sources"],
     )
-
 
 
 @router.post("/stream")
@@ -106,29 +102,52 @@ def stream_chat(
     history = message_repository.get_recent_messages(request.conversation_id)
 
     conversation_history = "\n".join(
-        [
-            f"{message.role}: {message.content}"
-            for message in reversed(history)
-        ]
+        [f"{message.role}: {message.content}" for message in reversed(history)]
     )
 
     def generate():
         full_answer = ""
 
-        for token in stream_question(
-            question=request.question,
-            conversation_history=conversation_history,
-        ):
-            full_answer += token
-            yield token
+        try:
+            for token in stream_question(
+                question=request.question,
+                conversation_history=conversation_history,
+            ):
+                full_answer += token
 
-        message_repository.create(
-            conversation_id=request.conversation_id,
-            role="ASSISTANT",
-            content=full_answer,
-        )
+                payload = json.dumps({
+                    "type": "token",
+                    "content": token,
+                })
+
+                yield f"data: {payload}\n\n"
+
+            message_repository.create(
+                conversation_id=request.conversation_id,
+                role="ASSISTANT",
+                content=full_answer,
+            )
+
+            done_payload = json.dumps({
+                "type": "done",
+            })
+
+            yield f"data: {done_payload}\n\n"
+
+        except Exception as error:
+            error_payload = json.dumps({
+                "type": "error",
+                "message": str(error),
+            })
+
+            yield f"data: {error_payload}\n\n"
 
     return StreamingResponse(
         generate(),
-        media_type="text/plain",
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
     )

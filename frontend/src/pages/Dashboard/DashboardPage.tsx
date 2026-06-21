@@ -1,11 +1,12 @@
 import { useState } from "react";
+import toast from "react-hot-toast";
 
 import { Menu } from "lucide-react";
 
 import { ChatWindow } from "../../components/chat/ChatWindow";
 import { Header } from "../../components/layout/Header";
 import { Sidebar } from "../../components/layout/Sidebar";
-import { askQuestion, type Source } from "../../services/chat.service";
+import { streamQuestion, type Source } from "../../services/chat.service";
 import type { Conversation } from "../../services/conversation.service";
 import { getMessages, type Message } from "../../services/message.service";
 
@@ -28,6 +29,7 @@ export function DashboardPage() {
       setMessages(data);
     } catch (error) {
       console.error(error);
+      toast.error("Failed to load messages");
     }
   }
 
@@ -35,17 +37,65 @@ export function DashboardPage() {
     if (!selectedConversation) return;
 
     setLoading(true);
+    setSources([]);
+
+    const userMessage: Message = {
+      id: `temp-user-${Date.now()}` as unknown as number,
+      conversation_id: selectedConversation.id,
+      role: "USER",
+      content: question,
+      created_at: new Date().toISOString(),
+    };
+
+    const assistantMessage: Message = {
+      id: `temp-assistant-${Date.now()}` as unknown as number,
+      conversation_id: selectedConversation.id,
+      role: "ASSISTANT",
+      content: "",
+      created_at: new Date().toISOString(),
+    };
+
+    setMessages((current) => [
+      ...current,
+      userMessage,
+      assistantMessage,
+    ]);
 
     try {
-      const response = await askQuestion(selectedConversation.id, question);
-
-      setSources(response.sources);
+      await streamQuestion(
+        selectedConversation.id,
+        question,
+        (token) => {
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === assistantMessage.id
+                ? {
+                    ...message,
+                    content: message.content + token,
+                  }
+                : message
+            )
+          );
+        }
+      );
 
       const updatedMessages = await getMessages(selectedConversation.id);
-
       setMessages(updatedMessages);
     } catch (error) {
       console.error(error);
+      toast.error("Failed to stream response");
+
+      setMessages((current) =>
+        current.map((message) =>
+          message.id === assistantMessage.id
+            ? {
+                ...message,
+                content:
+                  "Sorry, something went wrong while generating the response.",
+              }
+            : message
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -79,7 +129,7 @@ export function DashboardPage() {
         />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
           <button
             type="button"

@@ -67,14 +67,14 @@ export function ChatWindow({
   }
 
   return (
-    <main className="flex flex-1 flex-col bg-slate-50">
+    <main className="flex min-h-0 flex-1 flex-col bg-slate-50">
       <div className="border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
         <h2 className="truncate text-lg font-bold text-slate-900">
           {title || "Select a conversation"}
         </h2>
       </div>
 
-      <div className="flex-1 space-y-6 overflow-y-auto px-6 py-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
             <div className="rounded-2xl bg-white px-10 py-8 shadow-sm">
