@@ -1,6 +1,5 @@
-from app.ai.llm import generate_answer
-from app.ai.retriever import retrieve_relevant_chunks
 from app.ai.llm import generate_answer, stream_answer
+from app.ai.retriever import retrieve_relevant_chunks
 
 
 def build_context(question: str):
@@ -33,7 +32,7 @@ def stream_question(
     question: str,
     conversation_history: str = "",
 ):
-    context, sources = build_context(question)
+    context, _sources = build_context(question)
 
     for token in stream_answer(
         question=question,

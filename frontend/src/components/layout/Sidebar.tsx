@@ -53,21 +53,17 @@ export function Sidebar({
   }
 
   async function handleNewChat() {
-    const question = prompt("Start your chat with a question:");
+  try {
+    const conversation = await createConversation("New Chat");
 
-    if (!question) return;
+    setConversations((current) => [conversation, ...current]);
 
-    try {
-      const conversation = await createConversation(question);
-
-      setConversations((current) => [conversation, ...current]);
-
-      onSelectConversation(conversation);
-      onClose?.();
-    } catch (error) {
-      console.error(error);
-    }
+    onSelectConversation(conversation);
+    onClose?.();
+  } catch (error) {
+    console.error(error);
   }
+}
 
   async function handleRename(conversation: Conversation) {
     const title = prompt("Enter new conversation title:", conversation.title);
