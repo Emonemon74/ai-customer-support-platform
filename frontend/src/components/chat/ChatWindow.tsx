@@ -22,6 +22,13 @@ type ChatWindowProps = {
   sources: Source[];
 };
 
+const suggestedPrompts = [
+  "Summarize my uploaded document",
+  "What are the key skills mentioned?",
+  "Generate interview questions from this document",
+  "Explain this document in simple words",
+];
+
 export function ChatWindow({
   title,
   messages,
@@ -70,21 +77,36 @@ export function ChatWindow({
     <main className="flex min-h-0 flex-1 flex-col bg-slate-50">
       <div className="border-b border-slate-200 bg-white px-6 py-4 shadow-sm">
         <h2 className="truncate text-lg font-bold text-slate-900">
-          {title || "Select a conversation"}
+          {title || "New Chat"}
         </h2>
       </div>
 
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
-            <div className="rounded-2xl bg-white px-10 py-8 shadow-sm">
+            <div className="w-full max-w-3xl rounded-2xl bg-white px-8 py-8 shadow-sm">
               <h3 className="text-2xl font-bold text-slate-900">
-                Welcome to your AI workspace
+                How can I help you today?
               </h3>
 
               <p className="mt-2 text-sm text-slate-600">
-                Select a conversation to view messages.
+                Ask a question about your uploaded documents or choose a prompt
+                below.
               </p>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {suggestedPrompts.map((prompt) => (
+                  <button
+                    key={prompt}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => onSend(prompt)}
+                    className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-900 hover:bg-white hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
@@ -122,7 +144,7 @@ export function ChatWindow({
                 )}
 
                 <div
-                  className={`max-w-[75%] rounded-2xl px-5 py-4 text-sm leading-7 shadow-sm transition ${
+                  className={`max-w-[80%] rounded-2xl px-5 py-4 text-sm leading-7 shadow-sm transition ${
                     isUser
                       ? "rounded-tr-md bg-slate-900 text-white"
                       : "rounded-tl-md border border-slate-200 bg-white text-slate-800"
@@ -199,9 +221,7 @@ export function ChatWindow({
                             );
                           }
 
-                          return (
-                            <code className={className}>{children}</code>
-                          );
+                          return <code className={className}>{children}</code>;
                         },
                       }}
                     >
@@ -237,7 +257,7 @@ export function ChatWindow({
           })
         )}
 
-        {disabled && (
+        {disabled && messages.length > 0 && (
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm">
               <Bot size={20} />

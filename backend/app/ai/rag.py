@@ -2,8 +2,11 @@ from app.ai.llm import generate_answer, stream_answer
 from app.ai.retriever import retrieve_relevant_chunks
 
 
-def build_context(question: str):
-    chunks, metadatas = retrieve_relevant_chunks(question)
+def build_context(question: str, user_id: int):
+    chunks, metadatas = retrieve_relevant_chunks(
+        question=question,
+        user_id=user_id,
+    )
 
     context = "\n\n".join(chunks)
 
@@ -12,9 +15,13 @@ def build_context(question: str):
 
 def ask_question(
     question: str,
+    user_id: int,
     conversation_history: str = "",
 ):
-    context, sources = build_context(question)
+    context, sources = build_context(
+        question=question,
+        user_id=user_id,
+    )
 
     answer = generate_answer(
         question=question,
@@ -30,9 +37,13 @@ def ask_question(
 
 def stream_question(
     question: str,
+    user_id: int,
     conversation_history: str = "",
 ):
-    context, _sources = build_context(question)
+    context, _sources = build_context(
+        question=question,
+        user_id=user_id,
+    )
 
     for token in stream_answer(
         question=question,

@@ -72,8 +72,10 @@ class DocumentService:
                 chunks = TextChunker.chunk(text)
 
                 VectorStore().add_document(
-                    document.id,
-                    chunks,
+                    document_id=document.id,
+                    chunks=chunks,
+                    user_id=current_user.id,
+                    filename=file.filename,
                 )
 
             document = self.document_repository.update_status(

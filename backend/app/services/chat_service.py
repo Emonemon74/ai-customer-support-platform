@@ -68,6 +68,7 @@ class ChatService:
 
         result = ask_question(
             question=question,
+            user_id=current_user.id,
             conversation_history=conversation_history,
         )
 
@@ -103,6 +104,7 @@ class ChatService:
         try:
             for token in stream_question(
                 question=question,
+                user_id=current_user.id,
                 conversation_history=conversation_history,
             ):
                 full_answer += token

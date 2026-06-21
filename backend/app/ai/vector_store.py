@@ -11,7 +11,6 @@ collection = client.get_or_create_collection(
 
 
 class VectorStore:
-
     def __init__(self):
         self.collection = collection
 
@@ -19,11 +18,13 @@ class VectorStore:
         self,
         document_id: int,
         chunks: list[str],
+        user_id: int,
+        filename: str,
     ) -> None:
         embeddings = generate_embeddings(chunks)
 
         ids = [
-            f"{document_id}_{index}"
+            f"user-{user_id}-doc-{document_id}-chunk-{index}"
             for index in range(len(chunks))
         ]
 
@@ -31,6 +32,8 @@ class VectorStore:
             {
                 "document_id": document_id,
                 "chunk_index": index,
+                "user_id": user_id,
+                "filename": filename,
             }
             for index in range(len(chunks))
         ]
@@ -42,18 +45,21 @@ class VectorStore:
             metadatas=metadatas,
         )
 
-
     def store_chunks(
+        self,
         document_id: int,
         chunks: list[str],
+        user_id: int,
+        filename: str,
     ) -> None:
-        VectorStore().add_document(
+        self.add_document(
             document_id=document_id,
             chunks=chunks,
+            user_id=user_id,
+            filename=filename,
         )
 
-
-    def delete_document(self, document_id: int):
+    def delete_document(self, document_id: int) -> None:
         ids = self.collection.get(
             where={"document_id": document_id}
         )["ids"]
