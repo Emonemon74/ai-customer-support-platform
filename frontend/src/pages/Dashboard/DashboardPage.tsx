@@ -7,7 +7,10 @@ import { ChatWindow } from "../../components/chat/ChatWindow";
 import { Header } from "../../components/layout/Header";
 import { Sidebar } from "../../components/layout/Sidebar";
 import { streamQuestion, type Source } from "../../services/chat.service";
-import type { Conversation } from "../../services/conversation.service";
+import {
+  createConversation,
+  type Conversation,
+} from "../../services/conversation.service";
 import { getMessages, type Message } from "../../services/message.service";
 
 export function DashboardPage() {
@@ -18,6 +21,13 @@ export function DashboardPage() {
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
+
+  function handleNewChat() {
+    setSelectedConversation(undefined);
+    setMessages([]);
+    setSources([]);
+  }
 
   async function handleSelectConversation(conversation: Conversation) {
     setSelectedConversation(conversation);
@@ -34,68 +44,54 @@ export function DashboardPage() {
   }
 
   async function handleSend(question: string) {
-    if (!selectedConversation) return;
-
     setLoading(true);
     setSources([]);
 
-    const userMessage: Message = {
-      id: `temp-user-${Date.now()}` as unknown as number,
-      conversation_id: selectedConversation.id,
-      role: "USER",
-      content: question,
-      created_at: new Date().toISOString(),
-    };
-
-    const assistantMessage: Message = {
-      id: `temp-assistant-${Date.now()}` as unknown as number,
-      conversation_id: selectedConversation.id,
-      role: "ASSISTANT",
-      content: "",
-      created_at: new Date().toISOString(),
-    };
-
-    setMessages((current) => [
-      ...current,
-      userMessage,
-      assistantMessage,
-    ]);
-
     try {
-      await streamQuestion(
-        selectedConversation.id,
-        question,
-        (token) => {
-          setMessages((current) =>
-            current.map((message) =>
-              message.id === assistantMessage.id
-                ? {
-                    ...message,
-                    content: message.content + token,
-                  }
-                : message
-            )
-          );
-        }
-      );
+      let conversation = selectedConversation;
 
-      const updatedMessages = await getMessages(selectedConversation.id);
+      if (!conversation) {
+        conversation = await createConversation(question);
+        setSelectedConversation(conversation);
+        setSidebarRefreshKey((current) => current + 1);
+      }
+
+      const userMessage: Message = {
+        id: `temp-user-${Date.now()}` as unknown as number,
+        conversation_id: conversation.id,
+        role: "USER",
+        content: question,
+        created_at: new Date().toISOString(),
+      };
+
+      const assistantMessage: Message = {
+        id: `temp-assistant-${Date.now()}` as unknown as number,
+        conversation_id: conversation.id,
+        role: "ASSISTANT",
+        content: "",
+        created_at: new Date().toISOString(),
+      };
+
+      setMessages((current) => [...current, userMessage, assistantMessage]);
+
+      await streamQuestion(conversation.id, question, (token) => {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === assistantMessage.id
+              ? {
+                  ...message,
+                  content: message.content + token,
+                }
+              : message
+          )
+        );
+      });
+
+      const updatedMessages = await getMessages(conversation.id);
       setMessages(updatedMessages);
     } catch (error) {
       console.error(error);
       toast.error("Failed to stream response");
-
-      setMessages((current) =>
-        current.map((message) =>
-          message.id === assistantMessage.id
-            ? {
-                ...message,
-                content:
-                  "Sorry, something went wrong while generating the response.",
-              }
-            : message
-        )
-      );
     } finally {
       setLoading(false);
     }
@@ -106,6 +102,8 @@ export function DashboardPage() {
       <div className="hidden md:block">
         <Sidebar
           selectedConversationId={selectedConversation?.id}
+          refreshKey={sidebarRefreshKey}
+          onNewChat={handleNewChat}
           onSelectConversation={handleSelectConversation}
         />
       </div>
@@ -124,12 +122,14 @@ export function DashboardPage() {
       >
         <Sidebar
           selectedConversationId={selectedConversation?.id}
+          refreshKey={sidebarRefreshKey}
+          onNewChat={handleNewChat}
           onSelectConversation={handleSelectConversation}
           onClose={() => setIsSidebarOpen(false)}
         />
       </div>
 
-     <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
           <button
             type="button"
@@ -141,16 +141,16 @@ export function DashboardPage() {
           </button>
 
           <p className="truncate text-sm font-semibold text-slate-900">
-            {selectedConversation?.title || "AI Customer Support"}
+            {selectedConversation?.title || "New Chat"}
           </p>
         </div>
 
         <Header />
 
         <ChatWindow
-          title={selectedConversation?.title}
+          title={selectedConversation?.title || "New Chat"}
           messages={messages}
-          disabled={!selectedConversation || loading}
+          disabled={loading}
           onSend={handleSend}
           sources={sources}
         />

@@ -4,7 +4,6 @@ import { DocumentUpload } from "../document/DocumentUpload";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 
 import {
-  createConversation,
   deleteConversation,
   getConversations,
   renameConversation,
@@ -14,12 +13,16 @@ import {
 
 type SidebarProps = {
   selectedConversationId?: number;
+  refreshKey?: number;
+  onNewChat: () => void;
   onSelectConversation: (conversation: Conversation) => void;
   onClose?: () => void;
 };
 
 export function Sidebar({
   selectedConversationId,
+  refreshKey,
+  onNewChat,
   onSelectConversation,
   onClose,
 }: SidebarProps) {
@@ -52,18 +55,10 @@ export function Sidebar({
     }
   }
 
-  async function handleNewChat() {
-  try {
-    const conversation = await createConversation("New Chat");
-
-    setConversations((current) => [conversation, ...current]);
-
-    onSelectConversation(conversation);
+  function handleNewChat() {
+    onNewChat();
     onClose?.();
-  } catch (error) {
-    console.error(error);
   }
-}
 
   async function handleRename(conversation: Conversation) {
     const title = prompt("Enter new conversation title:", conversation.title);
@@ -112,7 +107,7 @@ export function Sidebar({
     }
 
     load();
-  }, []);
+  }, [refreshKey]);
 
   return (
     <aside className="flex h-screen w-72 flex-col border-r border-slate-200 bg-white p-4 shadow-xl md:shadow-none">
