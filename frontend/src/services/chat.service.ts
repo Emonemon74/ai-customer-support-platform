@@ -18,3 +18,40 @@ export async function askQuestion(conversationId: number, question: string) {
 
   return response.data;
 }
+
+
+export async function streamQuestion(
+  conversationId: number,
+  question: string,
+  onToken: (token: string) => void
+) {
+  const token = localStorage.getItem("access_token");
+
+  const response = await fetch("http://127.0.0.1:8000/api/v1/chat/stream", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      conversation_id: conversationId,
+      question,
+    }),
+  });
+
+  if (!response.body) {
+    throw new Error("No response body");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) break;
+
+    const chunk = decoder.decode(value);
+    onToken(chunk);
+  }
+}
