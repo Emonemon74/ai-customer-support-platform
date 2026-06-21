@@ -1,25 +1,27 @@
 import { useEffect, useState } from "react";
 
 import { DocumentUpload } from "../document/DocumentUpload";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Plus, Trash2, X } from "lucide-react";
 
 import {
   createConversation,
+  deleteConversation,
   getConversations,
   renameConversation,
   searchConversations,
-  deleteConversation,
   type Conversation,
 } from "../../services/conversation.service";
 
 type SidebarProps = {
   selectedConversationId?: number;
   onSelectConversation: (conversation: Conversation) => void;
+  onClose?: () => void;
 };
 
 export function Sidebar({
   selectedConversationId,
   onSelectConversation,
+  onClose,
 }: SidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,31 +63,22 @@ export function Sidebar({
       setConversations((current) => [conversation, ...current]);
 
       onSelectConversation(conversation);
+      onClose?.();
     } catch (error) {
       console.error(error);
     }
   }
 
   async function handleRename(conversation: Conversation) {
-    const title = prompt(
-      "Enter new conversation title:",
-      conversation.title
-    );
+    const title = prompt("Enter new conversation title:", conversation.title);
 
-    if (!title || title.trim() === "") {
-      return;
-    }
+    if (!title || title.trim() === "") return;
 
     try {
-      const updated = await renameConversation(
-        conversation.id,
-        title
-      );
+      const updated = await renameConversation(conversation.id, title);
 
       setConversations((current) =>
-        current.map((item) =>
-          item.id === updated.id ? updated : item
-        )
+        current.map((item) => (item.id === updated.id ? updated : item))
       );
     } catch (error) {
       console.error(error);
@@ -93,22 +86,25 @@ export function Sidebar({
   }
 
   async function handleDelete(conversation: Conversation) {
-  const confirmed = confirm(
-    `Delete "${conversation.title}"?`
-  );
+    const confirmed = confirm(`Delete "${conversation.title}"?`);
 
-  if (!confirmed) return;
+    if (!confirmed) return;
 
-  try {
-    await deleteConversation(conversation.id);
+    try {
+      await deleteConversation(conversation.id);
 
-    setConversations((current) =>
-      current.filter((item) => item.id !== conversation.id)
-    );
-  } catch (error) {
-    console.error(error);
+      setConversations((current) =>
+        current.filter((item) => item.id !== conversation.id)
+      );
+    } catch (error) {
+      console.error(error);
+    }
   }
-}
+
+  function handleSelect(conversation: Conversation) {
+    onSelectConversation(conversation);
+    onClose?.();
+  }
 
   useEffect(() => {
     async function load() {
@@ -123,14 +119,27 @@ export function Sidebar({
   }, []);
 
   return (
-    <aside className="flex w-72 flex-col border-r border-slate-200 bg-white p-4">
+    <aside className="flex h-screen w-72 flex-col border-r border-slate-200 bg-white p-4 shadow-xl md:shadow-none">
+      <div className="mb-4 flex items-center justify-between md:hidden">
+        <h2 className="text-sm font-bold text-slate-900">Menu</h2>
+
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+          title="Close sidebar"
+        >
+          <X size={20} />
+        </button>
+      </div>
+
       <button
         onClick={handleNewChat}
         className="w-full rounded-lg bg-slate-900 px-4 py-3 text-sm font-semibold text-white hover:bg-slate-800"
       >
-       <span className="flex items-center justify-center gap-2">
-        <Plus size={16} />
-        New Chat
+        <span className="flex items-center justify-center gap-2">
+          <Plus size={16} />
+          New Chat
         </span>
       </button>
 
@@ -148,55 +157,59 @@ export function Sidebar({
           Conversations
         </p>
 
-        {loading && (
-          <p className="text-sm text-slate-500">
-            Loading...
-          </p>
-        )}
+        {loading && <p className="text-sm text-slate-500">Loading...</p>}
 
         {!loading && conversations.length === 0 && (
-          <p className="text-sm text-slate-500">
-            No conversations found.
-          </p>
+          <p className="text-sm text-slate-500">No conversations found.</p>
         )}
 
         <div className="space-y-2">
-          {conversations.map((conversation) => (
-            <div
-              key={conversation.id}
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 transition ${
-                selectedConversationId === conversation.id
-                  ? "bg-slate-900 text-white"
-                  : "bg-slate-100 text-slate-800 hover:bg-slate-200"
-              }`}
-            >
-              <button
-                onClick={() =>
-                  onSelectConversation(conversation)
-                }
-                className="flex-1 text-left text-sm"
-              >
-                {conversation.title}
-              </button>
+          {conversations.map((conversation) => {
+            const isSelected = selectedConversationId === conversation.id;
 
-              <button
-                onClick={() =>
-                  handleRename(conversation)
-                }
-                className="text-sm hover:scale-110"
-                title="Rename"
+            return (
+              <div
+                key={conversation.id}
+                className={`group flex items-center gap-2 rounded-lg px-3 py-2 transition ${
+                  isSelected
+                    ? "bg-slate-900 text-white"
+                    : "bg-slate-100 text-slate-800 hover:bg-slate-200"
+                }`}
               >
-                <Pencil size={16} />
                 <button
-                    onClick={() => handleDelete(conversation)}
-                    className="text-sm hover:scale-110"
-                    title="Delete"
+                  onClick={() => handleSelect(conversation)}
+                  className="min-w-0 flex-1 truncate text-left text-sm"
+                  title={conversation.title}
                 >
-                    <Trash2 size={16} />
+                  {conversation.title}
                 </button>
-              </button>
-            </div>
-          ))}
+
+                <button
+                  onClick={() => handleRename(conversation)}
+                  className={`rounded p-1 transition hover:scale-110 ${
+                    isSelected
+                      ? "text-slate-200 hover:bg-slate-800"
+                      : "text-slate-500 hover:bg-slate-300 hover:text-slate-900"
+                  }`}
+                  title="Rename"
+                >
+                  <Pencil size={15} />
+                </button>
+
+                <button
+                  onClick={() => handleDelete(conversation)}
+                  className={`rounded p-1 transition hover:scale-110 ${
+                    isSelected
+                      ? "text-slate-200 hover:bg-slate-800"
+                      : "text-slate-500 hover:bg-slate-300 hover:text-red-600"
+                  }`}
+                  title="Delete"
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
     </aside>
