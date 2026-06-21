@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
 class SourceResponse(BaseModel):
     document_id: int
     chunk_index: int
+    filename: str | None = None
 
 
 class ChatResponse(BaseModel):

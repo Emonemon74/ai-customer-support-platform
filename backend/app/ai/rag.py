@@ -40,7 +40,7 @@ def stream_question(
     user_id: int,
     conversation_history: str = "",
 ):
-    context, _sources = build_context(
+    context, sources = build_context(
         question=question,
         user_id=user_id,
     )

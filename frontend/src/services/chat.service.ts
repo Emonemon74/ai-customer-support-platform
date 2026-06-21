@@ -3,6 +3,7 @@ import { api } from "../api/client";
 export type Source = {
   document_id: number;
   chunk_index: number;
+  filename?: string | null;
 };
 
 export type ChatResponse = {
@@ -11,6 +12,10 @@ export type ChatResponse = {
 };
 
 export type StreamEvent =
+  | {
+      type: "sources";
+      sources: Source[];
+    }
   | {
       type: "token";
       content: string;
@@ -23,10 +28,7 @@ export type StreamEvent =
       message: string;
     };
 
-export async function askQuestion(
-  conversationId: number,
-  question: string
-) {
+export async function askQuestion(conversationId: number, question: string) {
   const response = await api.post<ChatResponse>("/api/v1/chat/ask", {
     conversation_id: conversationId,
     question,
@@ -38,7 +40,8 @@ export async function askQuestion(
 export async function streamQuestion(
   conversationId: number,
   question: string,
-  onToken: (token: string) => void
+  onToken: (token: string) => void,
+  onSources?: (sources: Source[]) => void
 ) {
   const token = localStorage.getItem("access_token");
 
@@ -81,10 +84,13 @@ export async function streamQuestion(
       if (!event.startsWith("data: ")) continue;
 
       const rawData = event.replace("data: ", "").trim();
-
       if (!rawData) continue;
 
       const parsedEvent = JSON.parse(rawData) as StreamEvent;
+
+      if (parsedEvent.type === "sources") {
+        onSources?.(parsedEvent.sources);
+      }
 
       if (parsedEvent.type === "token") {
         onToken(parsedEvent.content);
