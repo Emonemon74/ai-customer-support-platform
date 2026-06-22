@@ -39,15 +39,22 @@ def stream_chat(
     request: ChatRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> StreamingResponse:
     chat_service = ChatService(db)
 
+    chat_service.validate_conversation_access(
+        conversation_id=request.conversation_id,
+        current_user=current_user,
+    )
+
+    stream = chat_service.stream(
+        conversation_id=request.conversation_id,
+        question=request.question,
+        current_user=current_user,
+    )
+
     return StreamingResponse(
-        chat_service.stream(
-            conversation_id=request.conversation_id,
-            question=request.question,
-            current_user=current_user,
-        ),
+        stream,
         media_type="text/event-stream",
         headers={
             "Cache-Control": "no-cache",

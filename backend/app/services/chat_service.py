@@ -58,7 +58,6 @@ class ChatService:
         question: str,
         current_user: User,
     ) -> Generator[str, None, None]:
-        self.validate_conversation_access(conversation_id, current_user)
 
         self.message_repository.create(conversation_id, "USER", question)
 

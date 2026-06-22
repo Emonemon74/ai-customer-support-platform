@@ -74,25 +74,18 @@ export function DashboardPage() {
 
       setMessages((current) => [...current, userMessage, assistantMessage]);
 
-      await streamQuestion(
-        conversation.id,
-        question,
-        (token) => {
-          setMessages((current) =>
-            current.map((message) =>
-              message.id === assistantMessage.id
-                ? {
-                    ...message,
-                    content: message.content + token,
-                  }
-                : message
-            )
-          );
-        },
-        (streamSources) => {
-          setSources(streamSources);
-        }
-      );
+      await streamQuestion(conversation.id, question, (token) => {
+        setMessages((current) =>
+          current.map((message) =>
+            message.id === assistantMessage.id
+              ? {
+                  ...message,
+                  content: message.content + token,
+                }
+              : message
+          )
+        );
+      });
 
       const updatedMessages = await getMessages(conversation.id);
       setMessages(updatedMessages);

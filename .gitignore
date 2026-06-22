@@ -180,6 +180,8 @@ pyrightconfig.json
 backend/.env
 backend/uploads/
 backend/chroma_db/
-backend/ai_support.db
+backend/*.db
+backend/*.db-*
+ecosystem.json
 __pycache__/
 *.pyc
