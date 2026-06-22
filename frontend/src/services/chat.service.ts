@@ -1,4 +1,4 @@
-import { api } from "../api/client";
+import { API_BASE_URL, api } from "../api/client";
 
 export type Source = {
   document_id: number;
@@ -45,7 +45,7 @@ export async function streamQuestion(
 ) {
   const token = localStorage.getItem("access_token");
 
-  const response = await fetch("http://127.0.0.1:8000/api/v1/chat/stream", {
+  const response = await fetch(`${API_BASE_URL}/api/v1/chat/stream`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

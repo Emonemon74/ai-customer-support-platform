@@ -2,6 +2,37 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## Environment
+
+Create a local `frontend/.env` file when the backend API is not running at the
+default local URL:
+
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+The value should include the backend origin only. API paths such as `/api/v1`
+are added by the frontend services.
+
+For Vercel, set `VITE_API_BASE_URL` to your Render backend origin:
+
+```env
+VITE_API_BASE_URL=https://your-render-service.onrender.com
+```
+
+The Render backend must allow the Vercel frontend origin through CORS:
+
+```env
+BACKEND_CORS_ORIGINS=https://your-vercel-app.vercel.app
+```
+
+For Vercel preview deployments, you can optionally set a project-specific regex
+on Render:
+
+```env
+BACKEND_CORS_ORIGIN_REGEX=^https://your-vercel-project-name.*\.vercel\.app$
+```
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
