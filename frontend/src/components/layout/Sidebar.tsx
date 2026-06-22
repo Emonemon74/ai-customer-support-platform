@@ -15,6 +15,7 @@ type SidebarProps = {
   selectedConversationId?: number;
   refreshKey?: number;
   onNewChat: () => void;
+  onCreateConversation: (filename: string) => Promise<number>;
   onSelectConversation: (conversation: Conversation) => void;
   onClose?: () => void;
 };
@@ -23,6 +24,7 @@ export function Sidebar({
   selectedConversationId,
   refreshKey,
   onNewChat,
+  onCreateConversation,
   onSelectConversation,
   onClose,
 }: SidebarProps) {
@@ -134,7 +136,10 @@ export function Sidebar({
         </span>
       </button>
 
-      <DocumentUpload conversationId={selectedConversationId} />
+      <DocumentUpload
+        conversationId={selectedConversationId}
+        onCreateConversation={onCreateConversation}
+      />
 
       <input
         value={search}

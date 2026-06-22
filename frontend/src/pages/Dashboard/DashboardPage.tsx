@@ -9,6 +9,7 @@ import { Sidebar } from "../../components/layout/Sidebar";
 import { streamQuestion, type Source } from "../../services/chat.service";
 import {
   createConversation,
+  renameConversation,
   type Conversation,
 } from "../../services/conversation.service";
 import { getMessages, type Message } from "../../services/message.service";
@@ -41,6 +42,21 @@ export function DashboardPage() {
       console.error(error);
       toast.error("Failed to load messages");
     }
+  }
+
+  async function handleCreateConversationForUpload(filename: string) {
+    const conversation = await createConversation(`Uploaded ${filename}`);
+    const renamedConversation = await renameConversation(
+      conversation.id,
+      filename
+    );
+
+    setSelectedConversation(renamedConversation);
+    setMessages([]);
+    setSources([]);
+    setSidebarRefreshKey((current) => current + 1);
+
+    return renamedConversation.id;
   }
 
   async function handleSend(question: string) {
@@ -109,6 +125,7 @@ export function DashboardPage() {
           selectedConversationId={selectedConversation?.id}
           refreshKey={sidebarRefreshKey}
           onNewChat={handleNewChat}
+          onCreateConversation={handleCreateConversationForUpload}
           onSelectConversation={handleSelectConversation}
         />
       </div>
@@ -129,6 +146,7 @@ export function DashboardPage() {
           selectedConversationId={selectedConversation?.id}
           refreshKey={sidebarRefreshKey}
           onNewChat={handleNewChat}
+          onCreateConversation={handleCreateConversationForUpload}
           onSelectConversation={handleSelectConversation}
           onClose={() => setIsSidebarOpen(false)}
         />

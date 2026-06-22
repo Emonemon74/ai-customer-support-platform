@@ -4,9 +4,13 @@ import { uploadDocument } from "../../services/document.service";
 
 type DocumentUploadProps = {
   conversationId?: number;
+  onCreateConversation?: (filename: string) => Promise<number>;
 };
 
-export function DocumentUpload({ conversationId }: DocumentUploadProps) {
+export function DocumentUpload({
+  conversationId,
+  onCreateConversation,
+}: DocumentUploadProps) {
   const [uploading, setUploading] = useState(false);
 
   async function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -14,15 +18,21 @@ export function DocumentUpload({ conversationId }: DocumentUploadProps) {
 
     if (!file) return;
 
-    if (!conversationId) {
-      alert("Select a conversation before uploading a document");
-      event.target.value = "";
-      return;
-    }
-
     try {
       setUploading(true);
-      await uploadDocument(file, conversationId);
+
+      let targetConversationId = conversationId;
+
+      if (!targetConversationId) {
+        if (!onCreateConversation) {
+          alert("Unable to create a conversation for this upload");
+          return;
+        }
+
+        targetConversationId = await onCreateConversation(file.name);
+      }
+
+      await uploadDocument(file, targetConversationId);
       alert("Document uploaded successfully");
     } catch (error) {
       console.error(error);
@@ -33,7 +43,7 @@ export function DocumentUpload({ conversationId }: DocumentUploadProps) {
     }
   }
 
-  const disabled = uploading || !conversationId;
+  const disabled = uploading;
 
   return (
     <label
