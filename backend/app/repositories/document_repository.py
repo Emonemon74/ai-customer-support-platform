@@ -13,12 +13,14 @@ class DocumentRepository:
         file_type: str,
         file_path: str,
         uploaded_by: int,
+        conversation_id: int,
     ) -> Document:
         document = Document(
             filename=filename,
             file_type=file_type,
             file_path=file_path,
             uploaded_by=uploaded_by,
+            conversation_id=conversation_id,
         )
 
         self.db.add(document)
@@ -27,10 +29,18 @@ class DocumentRepository:
 
         return document
 
-    def get_by_user(self, user_id: int) -> list[Document]:
+    def get_by_conversation(self, user_id: int, conversation_id: int) -> list[Document]:
         return (
             self.db.query(Document)
             .filter(Document.uploaded_by == user_id)
+            .filter(Document.conversation_id == conversation_id)
+            .all()
+        )
+
+    def get_all_by_conversation(self, conversation_id: int) -> list[Document]:
+        return (
+            self.db.query(Document)
+            .filter(Document.conversation_id == conversation_id)
             .all()
         )
 

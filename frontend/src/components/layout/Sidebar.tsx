@@ -134,7 +134,7 @@ export function Sidebar({
         </span>
       </button>
 
-      <DocumentUpload />
+      <DocumentUpload conversationId={selectedConversationId} />
 
       <input
         value={search}

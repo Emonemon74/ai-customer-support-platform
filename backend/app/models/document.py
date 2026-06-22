@@ -15,4 +15,5 @@ class Document(Base):
     file_path: Mapped[str] = mapped_column(String(500), nullable=False)
     status: Mapped[str] = mapped_column(String(50), default="UPLOADED")
     uploaded_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow) 

@@ -45,6 +45,7 @@ class ChatService:
         result = ask_question(
             question=question,
             user_id=current_user.id,
+            conversation_id=conversation_id,
             conversation_history=conversation_history,
         )
 
@@ -69,6 +70,7 @@ class ChatService:
             context, sources = build_context(
                 question=question,
                 user_id=current_user.id,
+                conversation_id=conversation_id,
             )
 
             sources_payload = json.dumps({

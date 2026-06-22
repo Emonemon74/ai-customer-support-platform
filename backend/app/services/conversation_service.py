@@ -9,14 +9,18 @@ from app.core.exceptions.conversation import (
 )
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
+from app.repositories.document_repository import DocumentRepository
 from app.repositories.message_repository import MessageRepository
 from app.schemas.conversation import ConversationCreateRequest
+from app.services.document_service import DocumentService
 
 
 class ConversationService:
 
     def __init__(self, db: Session):
         self.conversation_repository = ConversationRepository(db)
+        self.document_repository = DocumentRepository(db)
+        self.document_service = DocumentService(db)
         self.message_repository = MessageRepository(db)
 
     def create_conversation(
@@ -80,6 +84,11 @@ class ConversationService:
 
         if conversation.user_id != current_user.id:
             raise ConversationDeleteDeniedError()
+
+        documents = self.document_repository.get_all_by_conversation(conversation_id)
+
+        for document in documents:
+            self.document_service.delete_document_record(document)
 
         self.message_repository.delete_by_conversation(conversation_id)
         self.conversation_repository.delete(conversation)

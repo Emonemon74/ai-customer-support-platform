@@ -19,6 +19,7 @@ class VectorStore:
         document_id: int,
         chunks: list[str],
         user_id: int,
+        conversation_id: int,
         filename: str,
     ) -> None:
         embeddings = generate_embeddings(chunks)
@@ -33,6 +34,7 @@ class VectorStore:
                 "document_id": document_id,
                 "chunk_index": index,
                 "user_id": user_id,
+                "conversation_id": conversation_id,
                 "filename": filename,
             }
             for index in range(len(chunks))
@@ -50,12 +52,14 @@ class VectorStore:
         document_id: int,
         chunks: list[str],
         user_id: int,
+        conversation_id: int,
         filename: str,
     ) -> None:
         self.add_document(
             document_id=document_id,
             chunks=chunks,
             user_id=user_id,
+            conversation_id=conversation_id,
             filename=filename,
         )
 

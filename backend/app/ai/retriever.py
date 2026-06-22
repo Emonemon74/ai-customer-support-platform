@@ -5,6 +5,7 @@ from app.ai.vector_store import collection
 def retrieve_relevant_chunks(
     question: str,
     user_id: int,
+    conversation_id: int,
     n_results: int = 3,
 ):
     query_embedding = generate_embeddings([question])[0]
@@ -13,7 +14,10 @@ def retrieve_relevant_chunks(
         query_embeddings=[query_embedding],
         n_results=n_results,
         where={
-            "user_id": user_id,
+            "$and": [
+                {"user_id": user_id},
+                {"conversation_id": conversation_id},
+            ],
         },
     )
 

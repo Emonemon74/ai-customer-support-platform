@@ -10,6 +10,7 @@ class DocumentResponse(BaseModel):
     file_type: str
     status: str
     uploaded_by: int
+    conversation_id: int
     created_at: datetime
 
     class Config:

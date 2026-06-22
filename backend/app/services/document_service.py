@@ -13,6 +13,7 @@ from app.core.exceptions.document import (
     UnsupportedFileTypeError,
 )
 from app.models.user import User
+from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.document_repository import DocumentRepository
 
 
@@ -29,6 +30,7 @@ ALLOWED_CONTENT_TYPES = {
 
 class DocumentService:
     def __init__(self, db: Session):
+        self.conversation_repository = ConversationRepository(db)
         self.document_repository = DocumentRepository(db)
 
     def validate_file(self, file: UploadFile) -> None:
@@ -42,7 +44,24 @@ class DocumentService:
         if file_size > MAX_FILE_SIZE:
             raise FileTooLargeError()
 
-    def upload_document(self, file: UploadFile, current_user: User):
+    def validate_conversation_access(self, conversation_id: int, current_user: User):
+        conversation = self.conversation_repository.get_by_id(conversation_id)
+
+        if not conversation:
+            raise ValueError("Conversation not found")
+
+        if conversation.user_id != current_user.id:
+            raise ValueError("You are not authorized to access this conversation")
+
+        return conversation
+
+    def upload_document(
+        self,
+        file: UploadFile,
+        conversation_id: int,
+        current_user: User,
+    ):
+        self.validate_conversation_access(conversation_id, current_user)
         self.validate_file(file)
 
         os.makedirs(UPLOAD_DIR, exist_ok=True)
@@ -59,6 +78,7 @@ class DocumentService:
             file_type=file_extension,
             file_path=file_path,
             uploaded_by=current_user.id,
+            conversation_id=conversation_id,
         )
 
         try:
@@ -75,6 +95,7 @@ class DocumentService:
                     document_id=document.id,
                     chunks=chunks,
                     user_id=current_user.id,
+                    conversation_id=conversation_id,
                     filename=file.filename,
                 )
 
@@ -92,36 +113,62 @@ class DocumentService:
 
         return document
 
-    def list_documents(self, current_user: User):
-        return self.document_repository.get_by_user(current_user.id)
+    def list_documents(self, conversation_id: int, current_user: User):
+        self.validate_conversation_access(conversation_id, current_user)
 
-    def get_document(self, document_id: int, current_user: User):
+        return self.document_repository.get_by_conversation(
+            user_id=current_user.id,
+            conversation_id=conversation_id,
+        )
+
+    def get_document(
+        self,
+        document_id: int,
+        conversation_id: int,
+        current_user: User,
+    ):
+        self.validate_conversation_access(conversation_id, current_user)
         document = self.document_repository.get_by_id(document_id)
 
         if not document:
             raise ValueError("Document not found")
 
-        if document.uploaded_by != current_user.id:
+        if (
+            document.uploaded_by != current_user.id
+            or document.conversation_id != conversation_id
+        ):
             raise ValueError("You are not authorized to access this document")
 
         return document
 
-    def delete_document(self, document_id: int, current_user: User):
+    def delete_document(
+        self,
+        document_id: int,
+        conversation_id: int,
+        current_user: User,
+    ):
+        self.validate_conversation_access(conversation_id, current_user)
         document = self.document_repository.get_by_id(document_id)
 
         if not document:
             raise ValueError("Document not found")
 
-        if document.uploaded_by != current_user.id:
+        if (
+            document.uploaded_by != current_user.id
+            or document.conversation_id != conversation_id
+        ):
             raise ValueError("You are not authorized to delete this document")
 
-        if os.path.exists(document.file_path):
-            os.remove(document.file_path)
-            
-        VectorStore().delete_document(document.id)
-
-        self.document_repository.delete(document)
+        self.delete_document_record(document)
 
         return {
             "message": "Document deleted successfully"
         }
+
+    def delete_document_record(self, document):
+        if os.path.exists(document.file_path):
+            os.remove(document.file_path)
+
+        VectorStore().delete_document(document.id)
+
+        self.document_repository.delete(document)
