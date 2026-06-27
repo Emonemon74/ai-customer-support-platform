@@ -1,7 +1,5 @@
 import chromadb
 
-from app.ai.embeddings import generate_embeddings
-
 
 client = chromadb.PersistentClient(path="chroma_db")
 
@@ -22,8 +20,6 @@ class VectorStore:
         conversation_id: int,
         filename: str,
     ) -> None:
-        embeddings = generate_embeddings(chunks)
-
         ids = [
             f"user-{user_id}-doc-{document_id}-chunk-{index}"
             for index in range(len(chunks))
@@ -43,7 +39,6 @@ class VectorStore:
         self.collection.add(
             ids=ids,
             documents=chunks,
-            embeddings=embeddings,
             metadatas=metadatas,
         )
 
