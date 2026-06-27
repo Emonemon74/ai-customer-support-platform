@@ -1,0 +1,21 @@
+{
+  "apps": [
+    {
+      "name": "ai-support-backend",
+      "cwd": "./backend",
+      "script": "sh",
+      "args": "-c './.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload'",
+      "interpreter": "none",
+      "env": {
+        "PYTHONPATH": "."
+      }
+    },
+    {
+      "name": "ai-support-frontend",
+      "cwd": "./frontend",
+      "script": "npm",
+      "args": "run dev -- --host 127.0.0.1 --port 5173",
+      "interpreter": "none"
+    }
+  ]
+}

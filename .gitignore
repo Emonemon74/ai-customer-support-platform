@@ -182,6 +182,5 @@ backend/uploads/
 backend/chroma_db/
 backend/*.db
 backend/*.db-*
-ecosystem.json
 __pycache__/
 *.pyc
