@@ -31,6 +31,16 @@ target_metadata = Base.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+# Use DATABASE_URL from app settings (.env) rather than the value
+# committed in alembic.ini, so real credentials never need to be
+# checked into version control.
+from app.core.settings import settings
+# configparser treats "%" as interpolation syntax, so escape it (e.g. a
+# percent-encoded password like "%40") before storing the raw URL.
+config.set_main_option(
+    "sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%")
+)
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
