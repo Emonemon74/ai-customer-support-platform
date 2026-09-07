@@ -1,0 +1,31 @@
+Acme Cloud — Integrations Guide
+
+---PAGE---
+1. Slack
+
+The Slack integration posts a message to a channel whenever a document finishes
+processing or fails. Connect it from Settings > Integrations > Slack and choose
+the target channel. One workspace can connect to one Slack workspace at a time.
+
+---PAGE---
+2. Webhooks
+
+Outgoing webhooks are sent for the events document.ready, document.failed, and
+conversation.deleted. Each delivery is signed with an HMAC SHA-256 signature in
+the X-Acme-Signature header using your webhook secret. Failed deliveries are
+retried with exponential backoff for up to 24 hours.
+
+---PAGE---
+3. Zapier
+
+The Zapier app exposes three triggers: New Conversation, Document Ready, and
+Document Failed. It exposes one action: Upload Document from URL. The Zapier
+app uses the same 100 requests per minute rate limit as the API.
+
+---PAGE---
+4. Single sign-on providers
+
+SAML SSO has been tested with Okta, Azure AD, and Google Workspace. SCIM user
+provisioning is available for Okta and Azure AD only. When SCIM is enabled,
+users removed from the identity provider are deactivated in Acme Cloud within
+one hour.

@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
@@ -7,6 +9,7 @@ from app.db.deps import get_db
 from app.models.user import User
 from app.repositories.user_repository import UserRepository
 
+logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 
@@ -19,7 +22,7 @@ def get_current_user(
     payload = decode_access_token(token)
 
     if not payload:
-        print("Invalid or expired token")
+        logger.info("Rejected request with invalid or expired token")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid or expired token",
@@ -28,7 +31,7 @@ def get_current_user(
     email = payload.get("sub")
 
     if not email:
-        print("Invalid token payload")
+        logger.info("Rejected token with missing subject claim")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
@@ -37,7 +40,7 @@ def get_current_user(
     user = UserRepository(db).get_by_email(email)
 
     if not user:
-        print("User not found")
+        logger.info("Token subject does not match any user")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",

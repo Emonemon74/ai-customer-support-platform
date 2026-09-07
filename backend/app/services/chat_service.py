@@ -1,31 +1,29 @@
 import json
+import logging
 from typing import Generator
 
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.ai.llm import stream_answer
 from app.ai.rag import ask_question, build_context
+from app.core.authz import require_owned_conversation
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
 
+logger = logging.getLogger(__name__)
+
+GENERIC_STREAM_ERROR = "Something went wrong while generating the response."
+
 
 class ChatService:
     def __init__(self, db: Session):
+        self.db = db
         self.conversation_repository = ConversationRepository(db)
         self.message_repository = MessageRepository(db)
 
     def validate_conversation_access(self, conversation_id: int, current_user: User):
-        conversation = self.conversation_repository.get_by_id(conversation_id)
-
-        if not conversation:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
-
-        if conversation.user_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized")
-
-        return conversation
+        return require_owned_conversation(self.db, conversation_id, current_user.id)
 
     def build_conversation_history(self, conversation_id: int) -> str:
         history = self.message_repository.get_recent_messages(conversation_id)
@@ -59,6 +57,9 @@ class ChatService:
         question: str,
         current_user: User,
     ) -> Generator[str, None, None]:
+        # Defense in depth: the endpoint already checks ownership, but the
+        # generator re-validates so it can never run unscoped.
+        self.validate_conversation_access(conversation_id, current_user)
 
         self.message_repository.create(conversation_id, "USER", question)
 
@@ -102,10 +103,12 @@ class ChatService:
 
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
-        except Exception as error:
+        except Exception:
+            logger.exception("Streaming chat failed for conversation %s", conversation_id)
+
             error_payload = json.dumps({
                 "type": "error",
-                "message": str(error),
+                "message": GENERIC_STREAM_ERROR,
             })
 
             yield f"data: {error_payload}\n\n"

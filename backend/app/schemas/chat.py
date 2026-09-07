@@ -7,10 +7,11 @@ class ChatRequest(BaseModel):
 
 
 class SourceResponse(BaseModel):
-    document_id: int
-    conversation_id: int
-    chunk_index: int
+    document_id: int | None = None
+    conversation_id: int | None = None
+    chunk_index: int | None = None
     filename: str | None = None
+    page_number: int | None = None
 
 
 class ChatResponse(BaseModel):

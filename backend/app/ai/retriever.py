@@ -1,4 +1,6 @@
-from app.ai.vector_store import collection
+"""Backwards-compatible thin wrapper around the hybrid retriever."""
+
+from app.ai.hybrid_retriever import hybrid_search
 
 
 def retrieve_relevant_chunks(
@@ -7,18 +9,14 @@ def retrieve_relevant_chunks(
     conversation_id: int,
     n_results: int = 3,
 ):
-    results = collection.query(
-        query_texts=[question],
-        n_results=n_results,
-        where={
-            "$and": [
-                {"user_id": user_id},
-                {"conversation_id": conversation_id},
-            ],
-        },
+    results = hybrid_search(
+        question=question,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        top_n=n_results,
     )
 
-    documents = results["documents"][0]
-    metadatas = results["metadatas"][0]
+    documents = [r["text"] for r in results]
+    metadatas = [r["metadata"] for r in results]
 
     return documents, metadatas
