@@ -56,7 +56,7 @@ def generate_answer(
     conversation_history: str = "",
 ) -> str:
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=settings.GROQ_MODEL,
         messages=build_answer_messages(
             question=question,
             context=context,
@@ -74,7 +74,7 @@ def stream_answer(
     conversation_history: str = "",
 ):
     stream = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=settings.GROQ_MODEL,
         messages=build_answer_messages(
             question=question,
             context=context,
@@ -93,7 +93,7 @@ def stream_answer(
 
 def generate_conversation_title(question: str) -> str:
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=settings.GROQ_MODEL,
         messages=[
             {
                 "role": "system",

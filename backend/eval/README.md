@@ -42,8 +42,10 @@ with real data, and removed again at the end.
 See [`results.md`](results.md). Summary on the bundled 6-document corpus:
 hybrid closes a keyword-match gap in Recall@3 (0.97 → 1.00), reranking lifts MRR
 (0.95 → 0.99) by ordering the correct passage first, and the relevance
-threshold lets the system decline to answer 57% of unanswerable questions that
-the score-free modes always answer — at roughly 3x the retrieval latency.
+threshold (`RETRIEVAL_MIN_SCORE`, default 0.15) lets the system decline
+unanswerable questions that the score-free modes always answer — at roughly 3x
+the retrieval latency. Raising the threshold trades recall for a higher
+abstention rate.
 
 The corpus is small, so Recall@5 saturates; run it against a larger real
 document set to see the modes separate further.

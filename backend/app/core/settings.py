@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
 
     GROQ_API_KEY: str
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     DATABASE_URL: str
 
     SECRET_KEY: str
@@ -25,7 +26,7 @@ class Settings(BaseSettings):
     RERANKER_MODEL: str = "ms-marco-MiniLM-L-12-v2"
     # Minimum reranker score for a chunk to be treated as relevant context.
     # Below this the answer path is given empty context and must abstain.
-    RETRIEVAL_MIN_SCORE: float = 0.5
+    RETRIEVAL_MIN_SCORE: float = 0.15
 
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     BACKEND_CORS_ORIGIN_REGEX: str = ""
