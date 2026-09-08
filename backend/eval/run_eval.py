@@ -115,11 +115,10 @@ def evaluate(mode: str, dataset: list[dict]) -> dict:
 
         if row["expected_doc"] is None:
             unanswerable += 1
-            relevant = [
-                r for r in results
-                if r.get("rerank_score", 1.0) >= settings.RETRIEVAL_MIN_SCORE
-            ]
-            if not relevant:
+            # Mirrors build_context: context is withheld only when retrieval
+            # comes back empty. Otherwise the grounding prompt does the
+            # abstaining (measured by --with-answers).
+            if not results:
                 abstain_hits += 1
             continue
 

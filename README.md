@@ -45,9 +45,9 @@ harness with measured before/after numbers, and CI.
 - **Grounded chat** — questions retrieve passages scoped to the current user
   *and* conversation, an answer is generated from only those passages, and the
   response streams back over Server-Sent Events with a citation list.
-- **Honest refusals** — if no retrieved passage clears a relevance threshold,
-  the assistant returns a fixed "not found in your documents" message and no
-  sources.
+- **Honest refusals** — when the documents don't answer the question the
+  assistant returns a fixed "not found in your documents" message and no
+  sources (measured: 100% on the eval's unanswerable questions).
 - **React dashboard** — responsive sidebar, markdown + code rendering,
   streaming, per-answer source chips.
 
@@ -114,10 +114,10 @@ flowchart TB
     D --> RRF["Reciprocal Rank Fusion"]
     B --> RRF
     RRF --> RK["cross-encoder rerank<br/>(ms-marco-MiniLM-L-12-v2)"]
-    RK --> TH{"top score ≥ RETRIEVAL_MIN_SCORE?"}
+    RK --> TH{"any candidates?"}
     TH -- no --> NF["no context → assistant abstains"]
-    TH -- yes --> CTX["top 5 passages → context<br/>tagged [file.pdf, page N]"]
-    CTX --> LLM["Groq"]
+    TH -- yes --> CTX["top 5 passages → context<br/>tagged [file.pdf, page N]<br/>(prefer those above RETRIEVAL_MIN_SCORE)"]
+    CTX --> LLM["Groq<br/>grounding prompt abstains<br/>if context doesn't answer"]
     LLM --> A["answer + reconciled sources"]
 ```
 
@@ -138,12 +138,16 @@ documents change. Cache hit/miss ratio is in `/metrics`.
 | `RETRIEVAL_RRF_K` | `60` | RRF constant |
 | `RETRIEVAL_TOP_N` | `5` | passages passed to the LLM |
 | `RERANKER_MODEL` | `ms-marco-MiniLM-L-12-v2` | FlashRank cross-encoder |
-| `RETRIEVAL_MIN_SCORE` | `0.15` | rerank score below which context is dropped |
+| `RETRIEVAL_MIN_SCORE` | `0.15` | rerank score that marks a passage "clearly relevant" |
 
-Cross-encoders score vague "summarize this document" / "key points" queries near
-zero even when the passages are the right ones, so an explicit summary/overview
-request bypasses `RETRIEVAL_MIN_SCORE` and uses the fused top-N; the grounding
-prompt still keeps the answer to what's actually in the documents.
+The cross-encoder is a strong *ranker* but a noisy *classifier* — it scores
+short factual lines, name headers and vague "summarize this" queries well below
+`RETRIEVAL_MIN_SCORE` even when the passages are right. So when a conversation's
+documents return any candidates, the top few are passed as context (preferring
+those above the threshold) and the grounding prompt decides whether they
+actually answer the question. Context is withheld entirely only when retrieval
+comes back empty. The eval confirms the trade-off: over-abstention dropped to
+**0.00** while correct abstention on unanswerable questions stayed at **1.00**.
 
 ## Grounded answers
 
@@ -172,17 +176,17 @@ uv run python -m eval.run_eval --with-answers  # + LLM-graded answer quality
 
 Latest results on the bundled corpus ([`backend/eval/results.md`](backend/eval/results.md)):
 
-| Mode | Recall@3 | MRR | Abstain@unanswerable | p50 latency |
-| --- | --- | --- | --- | --- |
-| vector-only (baseline) | 0.97 | 0.953 | 0.00 | 75 ms |
-| + hybrid (BM25) | 1.00 | 0.955 | 0.00 | 76 ms |
-| + hybrid + rerank | 1.00 | **0.986** | **0.29** | 241 ms |
+| Mode | Recall@3 | MRR | p50 latency |
+| --- | --- | --- | --- |
+| vector-only (baseline) | 0.97 | 0.953 | 75 ms |
+| + hybrid (BM25) | 1.00 | 0.955 | 76 ms |
+| + hybrid + rerank | 1.00 | **0.986** | 247 ms |
 
-Answer quality of the `rerank` pipeline (LLM-graded): **source accuracy 0.97**
+Answer quality of the `rerank` pipeline (LLM-graded): **source accuracy 1.00**
 (cited the expected document + page), **correct abstention 1.00** on
-unanswerable questions, over-abstention 0.03. The corpus is small so Recall@5
-saturates — the differentiators are ranking quality (MRR) and the ability to
-decline. See [`backend/eval/README.md`](backend/eval/README.md).
+unanswerable questions, **over-abstention 0.00**. The corpus is small so
+Recall@5 saturates — the differentiators are ranking quality (MRR) and the
+ability to decline. See [`backend/eval/README.md`](backend/eval/README.md).
 
 ## Authentication & data isolation
 
@@ -305,7 +309,7 @@ npm run dev                    # http://localhost:5173
 
 ```bash
 cd backend
-uv run pytest                  # 54 tests: auth, isolation, chunking,
+uv run pytest                  # 49 tests: auth, isolation, chunking,
                                # live-Chroma retrieval, answer grounding
 uv run ruff check .
 ```

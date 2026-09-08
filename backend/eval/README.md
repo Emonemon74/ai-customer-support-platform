@@ -32,21 +32,21 @@ with real data, and removed again at the end.
 - **Doc Recall@5** – looser: any chunk from the right document is in the top 5.
 - **MRR** – mean reciprocal rank of the first fully-correct chunk. Rewards
   putting the right passage *first*, which is what the reranker is for.
-- **Abstain@unanswerable** – fraction of unanswerable questions where every
-  candidate fell below `RETRIEVAL_MIN_SCORE`, so `build_context` returns no
-  context and the model must say the answer isn't in the documents. Only the
-  `rerank` mode produces a score to threshold on.
 - **p50 latency** – median retrieval time per query on this machine.
+
+Abstention is measured at the answer layer, not retrieval: `--with-answers`
+reports **correct abstention** on unanswerable questions and **over-abstention**
+on answerable ones. `build_context` withholds context only when retrieval is
+empty; otherwise the grounding prompt decides.
 
 ## Latest results
 
 See [`results.md`](results.md). Summary on the bundled 6-document corpus:
 hybrid closes a keyword-match gap in Recall@3 (0.97 → 1.00), reranking lifts MRR
-(0.95 → 0.99) by ordering the correct passage first, and the relevance
-threshold (`RETRIEVAL_MIN_SCORE`, default 0.15) lets the system decline
-unanswerable questions that the score-free modes always answer — at roughly 3x
-the retrieval latency. Raising the threshold trades recall for a higher
-abstention rate.
+(0.95 → 0.99) by ordering the correct passage first — at roughly 3x the
+retrieval latency. With the grounding prompt doing the abstaining, the `rerank`
+pipeline scores 1.00 correct abstention on unanswerable questions and 0.00
+over-abstention on answerable ones.
 
 The corpus is small, so Recall@5 saturates; run it against a larger real
 document set to see the modes separate further.
