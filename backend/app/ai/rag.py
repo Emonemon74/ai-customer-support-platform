@@ -136,9 +136,8 @@ def stream_question(
         conversation_id=conversation_id,
     )
 
-    for token in stream_answer(
+    yield from stream_answer(
         question=question,
         context=context,
         conversation_history=conversation_history,
-    ):
-        yield token
+    )

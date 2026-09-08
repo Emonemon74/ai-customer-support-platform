@@ -1,19 +1,19 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
-from app.core.exceptions.document import FileTooLargeError, UnsupportedFileTypeError
 
 from app.core.exceptions.auth import (
     AuthenticationError,
     EmailAlreadyExistsError,
     UserNotFoundError,
 )
-
 from app.core.exceptions.conversation import (
     ConversationAccessDeniedError,
     ConversationDeleteDeniedError,
     ConversationNotFoundError,
     ConversationRenameDeniedError,
 )
+from app.core.exceptions.document import FileTooLargeError, UnsupportedFileTypeError
+
 
 def register_exception_handlers(app: FastAPI) -> None:
 
@@ -61,7 +61,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "error_code": "AUTH_003",
             },
         )
-    
+
     @app.exception_handler(UnsupportedFileTypeError)
     async def unsupported_file_type_handler(
         request: Request,
@@ -91,7 +91,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "error_code": "DOC_002",
             },
         )
-    
+
 
 
     @app.exception_handler(ConversationNotFoundError)

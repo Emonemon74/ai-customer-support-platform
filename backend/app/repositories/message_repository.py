@@ -36,7 +36,7 @@ class MessageRepository:
             .order_by(Message.created_at.asc())
             .all()
         )
-    
+
 
     def get_recent_messages(
         self,
@@ -50,7 +50,7 @@ class MessageRepository:
             .limit(limit)
             .all()
         )
-    
+
 
 
     def delete_by_conversation(

@@ -1,5 +1,4 @@
 import os
-import shutil
 from uuid import uuid4
 
 from fastapi import UploadFile
@@ -16,7 +15,6 @@ from app.core.exceptions.document import (
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.document_repository import DocumentRepository
-
 
 UPLOAD_DIR = "uploads"
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB

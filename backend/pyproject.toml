@@ -26,9 +26,22 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "httpx>=0.28",
+    "ruff>=0.16.6",
 ]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-q"
 filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["alembic", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/conftest.py" = ["E402"]

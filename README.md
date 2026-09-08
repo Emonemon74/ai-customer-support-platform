@@ -1,5 +1,7 @@
 # AI Customer Support Platform
 
+[![CI](https://github.com/Emonemon74/ai-customer-support-platform/actions/workflows/ci.yml/badge.svg)](https://github.com/Emonemon74/ai-customer-support-platform/actions/workflows/ci.yml)
+
 An AI-powered customer support workspace for chatting with uploaded documents. Users can create an account, upload PDFs into conversations, and ask questions that are answered using retrieved document context and conversation history.
 
 ## Features
@@ -8,7 +10,7 @@ An AI-powered customer support workspace for chatting with uploaded documents. U
 - Conversation history with create, search, rename, and delete actions
 - PDF upload and text extraction
 - Document chunking and retrieval with ChromaDB
-- Groq-powered AI answers using `llama-3.3-70b-versatile`
+- Groq-powered AI answers (model configurable via `GROQ_MODEL`, default `openai/gpt-oss-120b`)
 - Streaming chat responses over server-sent events
 - Source metadata for retrieved document chunks
 - React dashboard with responsive sidebar, markdown rendering, code highlighting, and copy actions

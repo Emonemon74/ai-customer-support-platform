@@ -1,6 +1,5 @@
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from sqlalchemy.orm import Session
-from fastapi import HTTPException, status
 
 from app.db.deps import get_db
 from app.dependencies.auth import get_current_user
@@ -67,7 +66,7 @@ def get_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(error),
         )
-    
+
 
 @router.delete("/{document_id}")
 def delete_document(

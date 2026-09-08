@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Generator
+from collections.abc import Generator
 
 from sqlalchemy.orm import Session
 
@@ -56,7 +56,7 @@ class ChatService:
         conversation_id: int,
         question: str,
         current_user: User,
-    ) -> Generator[str, None, None]:
+    ) -> Generator[str]:
         # Defense in depth: the endpoint already checks ownership, but the
         # generator re-validates so it can never run unscoped.
         self.validate_conversation_access(conversation_id, current_user)
