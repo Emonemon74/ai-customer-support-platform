@@ -79,13 +79,26 @@ The backend is layered: `api/` (HTTP) → `services/` (business logic) →
 ```mermaid
 flowchart LR
     U["POST /documents/upload<br/>file + conversation_id"] --> V{"validate<br/>owner · magic bytes · size"}
-    V -- reject --> E["400 / 404"]
-    V -- ok --> S["store file (uuid name)<br/>create row: PROCESSING"]
-    S --> P["page-aware text extraction<br/>(pypdf)"]
+    V -- reject --> E["400 / 404 / 409 duplicate"]
+    V -- ok --> S["store file (uuid name)<br/>create row: QUEUED<br/>return 202"]
+    S --> Q(["Redis / RQ queue"])
+    Q --> W["background worker<br/>row: PROCESSING"]
+    W --> P["page-aware text extraction<br/>(pypdf)"]
     P --> C["recursive chunking<br/>~800 chars, page-bounded<br/>drop noise + duplicates"]
     C --> EM["embed + index in ChromaDB<br/>metadata: user, conversation,<br/>document, page, chunk_index"]
     EM --> R["row: READY"]
+    W -- exception --> F["row: FAILED + reason<br/>auto-retry ×3, then POST .../retry"]
 ```
+
+Upload returns `202` immediately with a `QUEUED` document; parsing, chunking and
+embedding run in a background [RQ](https://python-rq.org/) worker so a large PDF
+never blocks the request. The job is idempotent and retried automatically;
+`POST /documents/{id}/retry` re-queues a `FAILED` one. The frontend polls
+`GET /documents` and shows per-document status. Duplicate uploads (same bytes,
+same conversation) are rejected with `409`.
+
+For a quick local run without Redis, set `DOCUMENT_QUEUE_ASYNC=false` (the
+default) and the same pipeline runs inline during the upload request.
 
 Every chunk carries `user_id`, `conversation_id`, `document_id`, `page_number`
 and `chunk_index` so retrieval can filter by owner and cite by page.
@@ -233,6 +246,14 @@ uv run uvicorn app.main:app --reload --port 8000
 
 `curl http://127.0.0.1:8000/health` → `{"status":"healthy"}`.
 
+To exercise the async ingestion path locally, run Redis and a worker and set
+`DOCUMENT_QUEUE_ASYNC=true`:
+
+```bash
+docker run -p 6379:6379 redis:7-alpine   # or a local redis-server
+DOCUMENT_QUEUE_ASYNC=true uv run python -m app.worker.main
+```
+
 On the first chat request the ChromaDB embedding model (~80 MB) and the
 FlashRank reranker (~90 MB) download and cache to disk.
 
@@ -249,7 +270,7 @@ npm run dev                    # http://localhost:5173
 
 ```bash
 cd backend
-uv run pytest                  # 35 tests: auth, isolation, chunking,
+uv run pytest                  # 39 tests: auth, isolation, chunking,
                                # live-Chroma retrieval, answer grounding
 uv run ruff check .
 ```
@@ -287,7 +308,9 @@ added by the client).
 ```text
 .
 ├── .github/workflows/ci.yml
+├── docker-compose.yml
 ├── backend/
+│   ├── Dockerfile
 │   ├── app/
 │   │   ├── ai/            # parser, chunker, vector_store, hybrid_retriever,
 │   │   │                  # reranker, rag, llm
@@ -297,11 +320,12 @@ added by the client).
 │   │   ├── models/        # SQLAlchemy: user, conversation, message, document
 │   │   ├── repositories/  # data access
 │   │   ├── schemas/       # Pydantic request/response
-│   │   └── services/      # auth, conversation, document, chat
+│   │   ├── services/      # auth, conversation, document, chat
+│   │   └── worker/        # RQ queue + document-processing job
 │   ├── alembic/           # migrations
 │   ├── eval/              # retrieval + answer evaluation harness
 │   └── tests/             # pytest suite
-└── frontend/
+└── frontend/             # + Dockerfile, nginx.conf
     └── src/
         ├── api/           # Axios client
         ├── components/    # chat/, document/, layout/
@@ -311,19 +335,32 @@ added by the client).
 
 ## Deployment
 
-The app runs as two processes — the FastAPI backend (`uvicorn`) and the built
-frontend (static files) — plus PostgreSQL, and needs persistent disk for
-`backend/uploads` and `backend/chroma_db`. `ecosystem.json` runs both with PM2
-for a single-box deployment.
+### Docker Compose (local / single box)
 
-A containerised setup (Dockerfiles + compose, managed Postgres, persistent
-volume for the vector store) is the next milestone — see below.
+```bash
+cp .env.example .env          # set GROQ_API_KEY and SECRET_KEY
+docker compose up --build     # frontend on http://localhost:8080
+```
+
+Five services: `frontend` (nginx serving the built SPA and proxying `/api`),
+`backend` (uvicorn, runs `alembic upgrade head` on start), `worker` (RQ),
+`postgres`, `redis`. Uploads and the ChromaDB store live on named volumes
+(`uploads_data`, `chroma_data`) shared by the backend and worker.
+
+For a non-container single box, `ecosystem.json` runs the backend, worker and
+frontend preview with PM2.
+
+### AWS
+
+Planned: ECS/Fargate for `backend` + `worker`, RDS Postgres, ElastiCache Redis,
+EFS for the shared upload/vector volume, the SPA on S3 + CloudFront.
 
 ## Roadmap
 
-- [ ] Dockerfiles + `docker-compose`, deploy to AWS (managed Postgres,
-      persistent volume for `chroma_db`)
-- [ ] Asynchronous ingestion (queue + worker) so large PDFs don't block upload
+- [x] Dockerfiles + `docker-compose` (managed Postgres, persistent volume for
+      `chroma_db`)
+- [ ] Deploy to AWS
+- [x] Asynchronous ingestion (queue + worker) so large PDFs don't block upload
 - [ ] Structured request logging with request/user/conversation ids and
       retrieval/LLM latency
 - [ ] Per-message citation history (sources currently reflect the latest answer)

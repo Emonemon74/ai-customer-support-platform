@@ -179,6 +179,7 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+.env
 backend/.env
 backend/uploads/
 backend/chroma_db/

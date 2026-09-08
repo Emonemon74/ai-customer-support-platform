@@ -11,6 +11,17 @@
       }
     },
     {
+      "name": "ai-support-worker",
+      "cwd": "./backend",
+      "script": "bash",
+      "args": "-lc \"uv run python -m app.worker.main\"",
+      "interpreter": "none",
+      "env": {
+        "PYTHONPATH": ".",
+        "DOCUMENT_QUEUE_ASYNC": "true"
+      }
+    },
+    {
       "name": "ai-support-frontend",
       "cwd": "./frontend",
       "script": "npm",
