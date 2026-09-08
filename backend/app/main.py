@@ -23,6 +23,15 @@ from app.core.settings import settings
 
 configure_logging()
 
+# Sent on every response. The API serves JSON only and is never framed.
+SECURITY_HEADERS = {
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Permissions-Policy": "geolocation=(), microphone=(), camera=()",
+}
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -61,6 +70,8 @@ async def request_context(request: Request, call_next):
 
     duration_ms = (time.perf_counter() - start) * 1000
     response.headers["X-Request-ID"] = request_id
+    for header, value in SECURITY_HEADERS.items():
+        response.headers.setdefault(header, value)
 
     route = request.scope.get("route")
     path = getattr(route, "path", request.url.path)

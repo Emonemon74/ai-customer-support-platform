@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.core.ratelimit import RateLimiter
+from app.core.settings import settings
 from app.db.deps import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -13,12 +15,15 @@ router = APIRouter(
     tags=["Chat"],
 )
 
+_chat_rate_limit = RateLimiter("chat", per_minute=settings.RATE_LIMIT_CHAT_PER_MINUTE)
+
 
 @router.post("/ask", response_model=ChatResponse)
 def ask(
     request: ChatRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _: None = Depends(_chat_rate_limit),
 ):
     chat_service = ChatService(db)
 
@@ -39,6 +44,7 @@ def stream_chat(
     request: ChatRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _: None = Depends(_chat_rate_limit),
 ) -> StreamingResponse:
     chat_service = ChatService(db)
 

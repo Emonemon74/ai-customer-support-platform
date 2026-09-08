@@ -203,6 +203,11 @@ that the victim's data is untouched.
 - **AI** — prompt-injection guard over retrieved content; relevance threshold
   prevents empty-context generation; error responses on the chat stream are
   generic (no internal detail leaked).
+- **Rate limiting** — per-IP fixed-window limits on the auth (10/min) and chat
+  (30/min) endpoints; `429` with a generic message when exceeded.
+- **Headers** — `X-Content-Type-Options`, `X-Frame-Options: DENY`,
+  `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy` on every
+  response.
 - **CORS** — origin allow-list via `BACKEND_CORS_ORIGINS`.
 
 ## Observability
@@ -287,7 +292,7 @@ npm run dev                    # http://localhost:5173
 
 ```bash
 cd backend
-uv run pytest                  # 42 tests: auth, isolation, chunking,
+uv run pytest                  # 44 tests: auth, isolation, chunking,
                                # live-Chroma retrieval, answer grounding
 uv run ruff check .
 ```
@@ -315,6 +320,11 @@ in-memory SQLite database.
 | `GROQ_MODEL` | no | `openai/gpt-oss-120b` | any chat model on your key |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | no | `1440` | JWT lifetime |
 | `BACKEND_CORS_ORIGINS` | no | localhost:5173 | comma-separated allow-list |
+| `REDIS_URL` | no | `redis://localhost:6379/0` | queue broker |
+| `DOCUMENT_QUEUE_ASYNC` | no | `false` | `true` = process uploads in the worker |
+| `RATE_LIMIT_ENABLED` | no | `true` | per-IP fixed-window limiting |
+| `RATE_LIMIT_AUTH_PER_MINUTE` | no | `10` | auth endpoint budget |
+| `RATE_LIMIT_CHAT_PER_MINUTE` | no | `30` | chat endpoint budget |
 | `RETRIEVAL_*` | no | see table above | retrieval tuning |
 
 `frontend/.env`: `VITE_API_BASE_URL` — the backend origin only (API paths are

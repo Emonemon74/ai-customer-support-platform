@@ -37,6 +37,11 @@ class Settings(BaseSettings):
     DOCUMENT_QUEUE_NAME: str = "documents"
     DOCUMENT_MAX_RETRIES: int = 3
 
+    # --- Rate limiting ---------------------------------------------------
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_AUTH_PER_MINUTE: int = 10
+    RATE_LIMIT_CHAT_PER_MINUTE: int = 30
+
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     BACKEND_CORS_ORIGIN_REGEX: str = ""
 
