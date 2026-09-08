@@ -17,6 +17,7 @@ type SidebarProps = {
   onNewChat: () => void;
   onCreateConversation: (filename: string) => Promise<number>;
   onSelectConversation: (conversation: Conversation) => void;
+  onConversationDeleted?: (conversationId: number) => void;
   onClose?: () => void;
 };
 
@@ -26,6 +27,7 @@ export function Sidebar({
   onNewChat,
   onCreateConversation,
   onSelectConversation,
+  onConversationDeleted,
   onClose,
 }: SidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -89,6 +91,8 @@ export function Sidebar({
       setConversations((current) =>
         current.filter((item) => item.id !== conversation.id)
       );
+
+      onConversationDeleted?.(conversation.id);
     } catch (error) {
       console.error(error);
     }

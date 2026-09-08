@@ -30,6 +30,12 @@ export function DashboardPage() {
     setSources([]);
   }
 
+  function handleConversationDeleted(conversationId: number) {
+    if (selectedConversation?.id === conversationId) {
+      handleNewChat();
+    }
+  }
+
   async function handleSelectConversation(conversation: Conversation) {
     setSelectedConversation(conversation);
     setSources([]);
@@ -138,6 +144,7 @@ export function DashboardPage() {
           onNewChat={handleNewChat}
           onCreateConversation={handleCreateConversationForUpload}
           onSelectConversation={handleSelectConversation}
+          onConversationDeleted={handleConversationDeleted}
         />
       </div>
 
@@ -159,6 +166,7 @@ export function DashboardPage() {
           onNewChat={handleNewChat}
           onCreateConversation={handleCreateConversationForUpload}
           onSelectConversation={handleSelectConversation}
+          onConversationDeleted={handleConversationDeleted}
           onClose={() => setIsSidebarOpen(false)}
         />
       </div>
