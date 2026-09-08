@@ -27,6 +27,9 @@ from app.models import conversation, document, message, refresh_token, user  # n
 
 @pytest.fixture(autouse=True)
 def _fresh_database():
+    from app.ai import cache
+
+    cache.clear()
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     yield

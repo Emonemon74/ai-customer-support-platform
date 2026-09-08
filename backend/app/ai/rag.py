@@ -1,8 +1,11 @@
+import hashlib
 import re
 import unicodedata
 
+from app.ai import cache
 from app.ai.hybrid_retriever import hybrid_search
 from app.ai.llm import FALLBACK_ANSWER, generate_answer, stream_answer
+from app.core.observability import metrics
 from app.core.settings import settings
 
 
@@ -81,7 +84,26 @@ def _format_sources(results: list[dict]) -> list[dict]:
     return sources
 
 
+def _cache_key(question: str, user_id: int, conversation_id: int) -> str:
+    version = cache.conversation_version(conversation_id)
+    raw = f"{user_id}:{conversation_id}:{version}:{settings.RETRIEVAL_MODE}:{question.strip().lower()}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
 def build_context(question: str, user_id: int, conversation_id: int):
+    key = _cache_key(question, user_id, conversation_id)
+    cached = cache.get(key)
+    if cached is not None:
+        metrics.inc("retrieval_cache_total", result="hit")
+        return cached
+    metrics.inc("retrieval_cache_total", result="miss")
+
+    result = _build_context_uncached(question, user_id, conversation_id)
+    cache.set(key, result)
+    return result
+
+
+def _build_context_uncached(question: str, user_id: int, conversation_id: int):
     results = hybrid_search(
         question=question,
         user_id=user_id,

@@ -125,6 +125,11 @@ flowchart TB
 `rerank` (default). The BM25 index is built on demand from the conversation's
 own chunks (small corpora, always current, nothing extra to maintain).
 
+Retrieval results are cached (in-process, TTL + LRU) keyed by a per-conversation
+version that bumps on every upload / delete, so a repeated question skips the
+dense + BM25 + rerank work and a stale answer is never served after the
+documents change. Cache hit/miss ratio is in `/metrics`.
+
 | Setting | Default | Meaning |
 | --- | --- | --- |
 | `RETRIEVAL_MODE` | `rerank` | `vector` \| `hybrid` \| `rerank` |
@@ -292,7 +297,7 @@ npm run dev                    # http://localhost:5173
 
 ```bash
 cd backend
-uv run pytest                  # 44 tests: auth, isolation, chunking,
+uv run pytest                  # 46 tests: auth, isolation, chunking,
                                # live-Chroma retrieval, answer grounding
 uv run ruff check .
 ```

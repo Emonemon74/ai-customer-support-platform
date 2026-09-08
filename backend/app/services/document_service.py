@@ -5,6 +5,7 @@ from uuid import uuid4
 from fastapi import UploadFile
 from sqlalchemy.orm import Session
 
+from app.ai import cache as retrieval_cache
 from app.ai.chunker import TextChunker
 from app.ai.parser import PDFParser
 from app.ai.vector_store import VectorStore
@@ -201,6 +202,7 @@ class DocumentService:
                     )
 
             self.document_repository.update_status(document, STATUS_READY)
+            retrieval_cache.bump_conversation(document.conversation_id)
 
             metrics.inc("document_processing_total", status="ready")
             metrics.observe("document_processing_ms", processing.ms)
@@ -274,5 +276,6 @@ class DocumentService:
             os.remove(document.file_path)
 
         VectorStore().delete_document(document.id, user_id=document.uploaded_by)
+        retrieval_cache.bump_conversation(document.conversation_id)
 
         self.document_repository.delete(document)
