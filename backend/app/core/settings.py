@@ -33,6 +33,11 @@ class Settings(BaseSettings):
     # document inline (used by tests, CI and simple local runs). In the
     # Docker stack it is true and an RQ worker drains the queue.
     REDIS_URL: str = "redis://localhost:6379/0"
+    # Empty -> embedded PersistentClient (local dev, tests, eval). Set to a
+    # host -> shared Chroma server (required once the worker is a separate
+    # process).
+    CHROMA_HOST: str = ""
+    CHROMA_PORT: int = 8000
     DOCUMENT_QUEUE_ASYNC: bool = False
     DOCUMENT_QUEUE_NAME: str = "documents"
     DOCUMENT_MAX_RETRIES: int = 3

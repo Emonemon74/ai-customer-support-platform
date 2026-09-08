@@ -104,16 +104,17 @@ def stream_answer(
         ),
         temperature=0,
         stream=True,
-        stream_options={"include_usage": True},
     )
 
     for chunk in stream:
-        # The final usage-only chunk carries no choices.
         if chunk.choices:
             content = chunk.choices[0].delta.content
             if content:
                 yield content
 
+        # Groq attaches final token usage to the last chunk under x_groq.
+        x_groq = getattr(chunk, "x_groq", None)
+        _record_usage(stats, getattr(x_groq, "usage", None) if x_groq else None)
         _record_usage(stats, getattr(chunk, "usage", None))
 
 

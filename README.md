@@ -225,11 +225,14 @@ that the victim's data is untouched.
   model abstained; ingestion logs chunk count and processing time.
 - **`GET /metrics`** — a plain-text snapshot (Prometheus format) of in-process
   counters: HTTP requests/errors by status, chat answers by outcome, LLM
-  tokens, document processing successes/failures, plus count/sum summaries for
-  request, retrieval, LLM and ingestion latency.
+  tokens, retrieval cache hit/miss, plus count/sum summaries for request,
+  retrieval and LLM latency.
 
 Kept dependency-free on purpose — a full OpenTelemetry/Prometheus/Grafana
-stack is a later step, once there's somewhere to ship it.
+stack is a later step, once there's somewhere to ship it. The counters are
+per-process, so `/metrics` reflects the API process; the worker's
+document-processing numbers are in its structured logs (a shared metrics store
+comes with that later step).
 
 ## API reference
 
@@ -374,10 +377,12 @@ cp .env.example .env          # set GROQ_API_KEY and SECRET_KEY
 docker compose up --build     # frontend on http://localhost:8080
 ```
 
-Five services: `frontend` (nginx serving the built SPA and proxying `/api`),
+Six services: `frontend` (nginx serving the built SPA and proxying `/api`),
 `backend` (uvicorn, runs `alembic upgrade head` on start), `worker` (RQ),
-`postgres`, `redis`. Uploads and the ChromaDB store live on named volumes
-(`uploads_data`, `chroma_data`) shared by the backend and worker.
+`postgres`, `redis`, and `chroma` (vector store as a server — the API and the
+worker are separate processes and can't share an embedded Chroma, so
+`CHROMA_HOST` points them both at this container). Raw uploads sit on the
+`uploads_data` volume shared by `backend` + `worker`; vectors on `chroma_data`.
 
 For a non-container single box, `ecosystem.json` runs the backend, worker and
 frontend preview with PM2.
@@ -385,7 +390,8 @@ frontend preview with PM2.
 ### AWS
 
 Planned: ECS/Fargate for `backend` + `worker`, RDS Postgres, ElastiCache Redis,
-EFS for the shared upload/vector volume, the SPA on S3 + CloudFront.
+Chroma on Fargate with an EFS volume (or a hosted vector DB), EFS for the shared
+upload volume, the SPA on S3 + CloudFront.
 
 ## Roadmap
 

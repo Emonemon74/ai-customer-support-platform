@@ -26,11 +26,26 @@ services:
       timeout: 5s
       retries: 10
 
+  # Shared vector store. The API and the worker are separate processes, so they
+  # cannot both open an embedded Chroma on disk -- they talk to this server.
+  chroma:
+    image: chromadb/chroma:1.5.9
+    volumes:
+      - chroma_data:/data
+    healthcheck:
+      # The image has no curl/wget/python -- bash /dev/tcp is a plain port probe.
+      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/localhost/8000"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
   backend:
     build: ./backend
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_support}
       REDIS_URL: redis://redis:6379/0
+      CHROMA_HOST: chroma
+      CHROMA_PORT: "8000"
       DOCUMENT_QUEUE_ASYNC: "true"
       GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY in .env}
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
@@ -38,11 +53,12 @@ services:
       BACKEND_CORS_ORIGINS: ${BACKEND_CORS_ORIGINS:-http://localhost:8080}
     volumes:
       - uploads_data:/app/uploads
-      - chroma_data:/app/chroma_db
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      chroma:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
@@ -56,16 +72,20 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-ai_support}
       REDIS_URL: redis://redis:6379/0
+      CHROMA_HOST: chroma
+      CHROMA_PORT: "8000"
       DOCUMENT_QUEUE_ASYNC: "true"
       GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY in .env}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       # The API container runs migrations; the worker must not race it.
       RUN_MIGRATIONS: "0"
     volumes:
       - uploads_data:/app/uploads
-      - chroma_data:/app/chroma_db
     depends_on:
       backend:
+        condition: service_healthy
+      chroma:
         condition: service_healthy
 
   frontend:

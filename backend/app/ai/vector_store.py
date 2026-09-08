@@ -1,6 +1,17 @@
 import chromadb
 
-client = chromadb.PersistentClient(path="chroma_db")
+from app.core.settings import settings
+
+# ChromaDB's embedded PersistentClient is single-process only. When the API and
+# the ingestion worker run as separate processes (the Docker stack) they must
+# talk to a shared Chroma *server* instead, or the on-disk index corrupts.
+if settings.CHROMA_HOST:
+    client = chromadb.HttpClient(
+        host=settings.CHROMA_HOST,
+        port=settings.CHROMA_PORT,
+    )
+else:
+    client = chromadb.PersistentClient(path="chroma_db")
 
 collection = client.get_or_create_collection(name="documents")
 
