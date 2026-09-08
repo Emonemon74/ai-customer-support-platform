@@ -12,7 +12,11 @@ from app.core.exceptions.conversation import (
     ConversationNotFoundError,
     ConversationRenameDeniedError,
 )
-from app.core.exceptions.document import FileTooLargeError, UnsupportedFileTypeError
+from app.core.exceptions.document import (
+    DuplicateDocumentError,
+    FileTooLargeError,
+    UnsupportedFileTypeError,
+)
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -93,6 +97,20 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
 
+    @app.exception_handler(DuplicateDocumentError)
+    async def duplicate_document_handler(
+        request: Request,
+        exc: DuplicateDocumentError,
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "success": False,
+                "message": exc.message,
+                "data": None,
+                "error_code": "DOC_003",
+            },
+        )
 
     @app.exception_handler(ConversationNotFoundError)
     async def conversation_not_found_handler(

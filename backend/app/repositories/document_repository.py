@@ -14,6 +14,8 @@ class DocumentRepository:
         file_path: str,
         uploaded_by: int,
         conversation_id: int,
+        content_hash: str | None = None,
+        status: str = "QUEUED",
     ) -> Document:
         document = Document(
             filename=filename,
@@ -21,6 +23,8 @@ class DocumentRepository:
             file_path=file_path,
             uploaded_by=uploaded_by,
             conversation_id=conversation_id,
+            content_hash=content_hash,
+            status=status,
         )
 
         self.db.add(document)
@@ -44,6 +48,16 @@ class DocumentRepository:
             .all()
         )
 
+    def get_by_content_hash(
+        self, conversation_id: int, content_hash: str
+    ) -> Document | None:
+        return (
+            self.db.query(Document)
+            .filter(Document.conversation_id == conversation_id)
+            .filter(Document.content_hash == content_hash)
+            .first()
+        )
+
     def get_by_id(self, document_id: int) -> Document | None:
         return (
             self.db.query(Document)
@@ -51,8 +65,11 @@ class DocumentRepository:
             .first()
         )
 
-    def update_status(self, document: Document, status: str) -> Document:
+    def update_status(
+        self, document: Document, status: str, failure_reason: str | None = None
+    ) -> Document:
         document.status = status
+        document.failure_reason = failure_reason
 
         self.db.add(document)
         self.db.commit()

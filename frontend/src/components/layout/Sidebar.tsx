@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { DocumentList } from "../document/DocumentList";
 import { DocumentUpload } from "../document/DocumentUpload";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 
@@ -33,6 +34,7 @@ export function Sidebar({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [documentRefreshKey, setDocumentRefreshKey] = useState(0);
 
   async function loadConversations() {
     try {
@@ -143,6 +145,12 @@ export function Sidebar({
       <DocumentUpload
         conversationId={selectedConversationId}
         onCreateConversation={onCreateConversation}
+        onUploaded={() => setDocumentRefreshKey((current) => current + 1)}
+      />
+
+      <DocumentList
+        conversationId={selectedConversationId}
+        refreshKey={documentRefreshKey}
       />
 
       <input

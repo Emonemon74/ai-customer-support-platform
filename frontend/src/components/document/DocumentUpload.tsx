@@ -5,11 +5,13 @@ import { uploadDocument } from "../../services/document.service";
 type DocumentUploadProps = {
   conversationId?: number;
   onCreateConversation?: (filename: string) => Promise<number>;
+  onUploaded?: () => void;
 };
 
 export function DocumentUpload({
   conversationId,
   onCreateConversation,
+  onUploaded,
 }: DocumentUploadProps) {
   const [uploading, setUploading] = useState(false);
 
@@ -33,7 +35,7 @@ export function DocumentUpload({
       }
 
       await uploadDocument(file, targetConversationId);
-      alert("Document uploaded successfully");
+      onUploaded?.();
     } catch (error) {
       console.error(error);
       alert("Upload failed");

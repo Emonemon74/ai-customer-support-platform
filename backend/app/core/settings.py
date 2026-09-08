@@ -28,6 +28,15 @@ class Settings(BaseSettings):
     # Below this the answer path is given empty context and must abstain.
     RETRIEVAL_MIN_SCORE: float = 0.15
 
+    # --- Async document ingestion ---------------------------------------
+    # When DOCUMENT_QUEUE_ASYNC is false the upload endpoint processes the
+    # document inline (used by tests, CI and simple local runs). In the
+    # Docker stack it is true and an RQ worker drains the queue.
+    REDIS_URL: str = "redis://localhost:6379/0"
+    DOCUMENT_QUEUE_ASYNC: bool = False
+    DOCUMENT_QUEUE_NAME: str = "documents"
+    DOCUMENT_MAX_RETRIES: int = 3
+
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     BACKEND_CORS_ORIGIN_REGEX: str = ""
 

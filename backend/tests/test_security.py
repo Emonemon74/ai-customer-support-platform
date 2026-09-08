@@ -19,7 +19,7 @@ def _upload(client, headers, conversation_id, filename="policy.pdf"):
 def test_user_can_upload_to_own_conversation(client, user_a):
     conversation_id = make_conversation(client, user_a)
     response = _upload(client, user_a, conversation_id)
-    assert response.status_code == 200
+    assert response.status_code == 202
     assert response.json()["status"] == "READY"
 
 

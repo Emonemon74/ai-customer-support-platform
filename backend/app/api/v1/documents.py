@@ -13,13 +13,22 @@ router = APIRouter(
 )
 
 
-@router.post("/upload", response_model=DocumentResponse)
+@router.post(
+    "/upload",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
 def upload_document(
     file: UploadFile = File(...),
     conversation_id: int = Form(...),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    """Accept the file and queue it for processing.
+
+    Responds ``202 Accepted`` with the document in ``QUEUED`` status. Poll
+    ``GET /documents/{id}`` for ``PROCESSING`` -> ``READY`` / ``FAILED``.
+    """
     try:
         return DocumentService(db).upload_document(
             file=file,
@@ -57,6 +66,31 @@ def get_document(
 ):
     try:
         return DocumentService(db).get_document(
+            document_id=document_id,
+            conversation_id=conversation_id,
+            current_user=current_user,
+        )
+    except ValueError as error:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(error),
+        )
+
+
+@router.post(
+    "/{document_id}/retry",
+    response_model=DocumentResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+)
+def retry_document(
+    document_id: int,
+    conversation_id: int = Query(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Re-queue a document whose processing previously failed."""
+    try:
+        return DocumentService(db).retry_document(
             document_id=document_id,
             conversation_id=conversation_id,
             current_user=current_user,

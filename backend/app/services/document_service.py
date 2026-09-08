@@ -1,3 +1,4 @@
+import hashlib
 import os
 from uuid import uuid4
 
@@ -9,8 +10,17 @@ from app.ai.parser import PDFParser
 from app.ai.vector_store import VectorStore
 from app.core.authz import require_owned_conversation, require_owned_document
 from app.core.exceptions.document import (
+    DuplicateDocumentError,
     FileTooLargeError,
     UnsupportedFileTypeError,
+)
+from app.core.logging.logger import logger
+from app.core.settings import settings
+from app.models.document import (
+    STATUS_FAILED,
+    STATUS_PROCESSING,
+    STATUS_QUEUED,
+    STATUS_READY,
 )
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
@@ -72,7 +82,9 @@ class DocumentService:
     def validate_conversation_access(self, conversation_id: int, current_user: User):
         return require_owned_conversation(self.db, conversation_id, current_user.id)
 
-    def _write_to_disk(self, file: UploadFile, file_path: str) -> None:
+    def _write_to_disk(self, file: UploadFile, file_path: str) -> str:
+        """Stream the upload to disk, returning its SHA-256 hex digest."""
+        digest = hashlib.sha256()
         written = 0
         with open(file_path, "wb") as buffer:
             while chunk := file.file.read(_COPY_CHUNK):
@@ -81,7 +93,9 @@ class DocumentService:
                     buffer.close()
                     os.remove(file_path)
                     raise FileTooLargeError()
+                digest.update(chunk)
                 buffer.write(chunk)
+        return digest.hexdigest()
 
     def upload_document(
         self,
@@ -89,6 +103,12 @@ class DocumentService:
         conversation_id: int,
         current_user: User,
     ):
+        """Persist the raw file and queue it for processing.
+
+        Returns immediately with a ``QUEUED`` document -- parsing, chunking and
+        embedding happen in a background job (or inline when
+        ``DOCUMENT_QUEUE_ASYNC`` is off).
+        """
         self.validate_conversation_access(conversation_id, current_user)
         file_extension = self.validate_file(file)
 
@@ -97,7 +117,14 @@ class DocumentService:
         unique_filename = f"{uuid4()}.{file_extension}"
         file_path = os.path.join(UPLOAD_DIR, unique_filename)
 
-        self._write_to_disk(file, file_path)
+        content_hash = self._write_to_disk(file, file_path)
+
+        existing = self.document_repository.get_by_content_hash(
+            conversation_id, content_hash
+        )
+        if existing is not None:
+            os.remove(file_path)
+            raise DuplicateDocumentError()
 
         document = self.document_repository.create(
             filename=file.filename,
@@ -105,28 +132,88 @@ class DocumentService:
             file_path=file_path,
             uploaded_by=current_user.id,
             conversation_id=conversation_id,
+            content_hash=content_hash,
+            status=STATUS_QUEUED,
         )
 
-        try:
-            document = self.document_repository.update_status(document, "PROCESSING")
+        self._enqueue(document)
 
-            if file_extension == "pdf":
-                pages = PDFParser.extract_pages(file_path)
+        return document
+
+    def _enqueue(self, document) -> None:
+        if settings.DOCUMENT_QUEUE_ASYNC:
+            from rq import Retry
+
+            from app.worker.queue import get_document_queue
+            from app.worker.tasks import process_document
+
+            get_document_queue().enqueue(
+                process_document,
+                document.id,
+                retry=Retry(
+                    max=settings.DOCUMENT_MAX_RETRIES,
+                    interval=[10, 30, 60],
+                ),
+            )
+            logger.info("queued document_id=%s for processing", document.id)
+        else:
+            self.process_document(document.id)
+
+    def process_document(self, document_id: int) -> None:
+        """Parse -> chunk -> embed -> index. Idempotent and retry-safe."""
+        document = self.document_repository.get_by_id(document_id)
+
+        if document is None:
+            logger.warning("process_document: document_id=%s not found", document_id)
+            return
+
+        if document.status == STATUS_READY:
+            return
+
+        self.document_repository.update_status(document, STATUS_PROCESSING)
+
+        try:
+            if document.file_type == "pdf":
+                # Clear anything a previous attempt may have indexed so a
+                # retry does not create duplicate chunks.
+                VectorStore().delete_document(
+                    document.id, user_id=document.uploaded_by
+                )
+
+                pages = PDFParser.extract_pages(document.file_path)
                 chunks = TextChunker.chunk_pages(pages)
 
                 VectorStore().add_document(
                     document_id=document.id,
                     chunks=chunks,
-                    user_id=current_user.id,
-                    conversation_id=conversation_id,
-                    filename=file.filename,
+                    user_id=document.uploaded_by,
+                    conversation_id=document.conversation_id,
+                    filename=document.filename,
                 )
 
-            document = self.document_repository.update_status(document, "READY")
+            self.document_repository.update_status(document, STATUS_READY)
 
-        except Exception:
-            document = self.document_repository.update_status(document, "FAILED")
+        except Exception as error:
+            self.document_repository.update_status(
+                document, STATUS_FAILED, str(error)[:1000]
+            )
             raise
+
+    def retry_document(
+        self,
+        document_id: int,
+        conversation_id: int,
+        current_user: User,
+    ):
+        document = require_owned_document(
+            self.db, document_id, current_user.id, conversation_id
+        )
+
+        if document.status != STATUS_FAILED:
+            return document
+
+        self.document_repository.update_status(document, STATUS_QUEUED)
+        self._enqueue(document)
 
         return document
 
