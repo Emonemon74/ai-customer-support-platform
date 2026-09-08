@@ -16,8 +16,9 @@ questions by hand.
 
 ```bash
 cd backend
-uv run python -m eval.run_eval          # ingest, evaluate, write results.md, clean up
-uv run python -m eval.run_eval --keep   # leave the eval data in the vector store
+uv run python -m eval.run_eval                 # retrieval metrics only
+uv run python -m eval.run_eval --with-answers  # + LLM answer-quality pass (one Groq call per question)
+uv run python -m eval.run_eval --keep          # leave the eval data in the vector store
 ```
 
 The corpus (`corpus/*.txt`, split into pages with `---PAGE---` markers) is
@@ -49,3 +50,10 @@ abstention rate.
 
 The corpus is small, so Recall@5 saturates; run it against a larger real
 document set to see the modes separate further.
+
+`--with-answers` grades the production (rerank) pipeline end to end with the
+LLM: **source accuracy ~0.97** (the answer cited the expected document + page),
+**correct abstention 1.00** on the 7 unanswerable questions, over-abstention
+~0.03. Answer accuracy (~0.76) is a strict substring check against a short
+expected string, so it undercounts correct answers that paraphrase ("twenty
+nine" vs "29") — treat it as a floor.

@@ -1,9 +1,11 @@
 import { API_BASE_URL, api } from "../api/client";
 
 export type Source = {
-  document_id: number;
-  chunk_index: number;
+  document_id: number | null;
+  conversation_id?: number | null;
+  chunk_index?: number | null;
   filename?: string | null;
+  page_number?: number | null;
 };
 
 export type ChatResponse = {

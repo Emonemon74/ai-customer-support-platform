@@ -1,6 +1,50 @@
+import re
+import unicodedata
+
 from app.ai.hybrid_retriever import hybrid_search
-from app.ai.llm import generate_answer, stream_answer
+from app.ai.llm import FALLBACK_ANSWER, generate_answer, stream_answer
 from app.core.settings import settings
+
+
+def _tag(filename: str | None, page) -> str:
+    name = filename or "document"
+    if page in (None, -1):
+        return f"[{name}]"
+    return f"[{name}, page {page}]"
+
+
+# Models sometimes render the citation with fancy brackets (gpt-oss uses full-
+# width 【 】) or non-breaking / narrow spaces. Fold all of that away before
+# comparing the answer text to a source tag.
+_BRACKETS = {"【": "[", "〔": "[", "「": "[",
+             "】": "]", "〕": "]", "」": "]"}
+
+
+def _normalize(text: str) -> str:
+    text = unicodedata.normalize("NFKC", text)
+    for fancy, plain in _BRACKETS.items():
+        text = text.replace(fancy, plain)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def reconcile_sources(answer: str, sources: list[dict]) -> list[dict]:
+    """Keep the source list honest against the final answer.
+
+    - If the model abstained it used none of the context, so return no sources.
+    - Otherwise keep only sources the model actually cited by tag; if it cited
+      nothing recognisable, fall back to the full retrieved list.
+    """
+    normalized = _normalize(answer)
+
+    if normalized == _normalize(FALLBACK_ANSWER):
+        return []
+
+    cited = [
+        s
+        for s in sources
+        if _normalize(_tag(s.get("filename"), s.get("page_number"))) in normalized
+    ]
+    return cited or sources
 
 
 def _is_relevant(result: dict) -> bool:
@@ -52,13 +96,7 @@ def build_context(question: str, user_id: int, conversation_id: int):
         return "", []
 
     context = "\n\n".join(
-        f"[{r['metadata'].get('filename', 'document')}"
-        + (
-            f", page {r['metadata']['page_number']}"
-            if r["metadata"].get("page_number", -1) not in (None, -1)
-            else ""
-        )
-        + f"]\n{r['text']}"
+        f"{_tag(r['metadata'].get('filename'), r['metadata'].get('page_number'))}\n{r['text']}"
         for r in relevant
     )
 
@@ -83,7 +121,7 @@ def ask_question(
         conversation_history=conversation_history,
     )
 
-    return {"answer": answer, "sources": sources}
+    return {"answer": answer, "sources": reconcile_sources(answer, sources)}
 
 
 def stream_question(

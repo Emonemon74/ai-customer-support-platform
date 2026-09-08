@@ -113,6 +113,17 @@ export function DashboardPage() {
     } catch (error) {
       console.error(error);
       toast.error("Failed to stream response");
+      setMessages((current) =>
+        current.map((message) =>
+          message.role === "ASSISTANT" && message.content === ""
+            ? {
+                ...message,
+                content:
+                  "Sorry — something went wrong generating a response. Please try again.",
+              }
+            : message
+        )
+      );
     } finally {
       setLoading(false);
     }

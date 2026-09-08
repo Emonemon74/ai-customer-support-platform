@@ -5,7 +5,7 @@ from typing import Generator
 from sqlalchemy.orm import Session
 
 from app.ai.llm import stream_answer
-from app.ai.rag import ask_question, build_context
+from app.ai.rag import ask_question, build_context, reconcile_sources
 from app.core.authz import require_owned_conversation
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
@@ -100,6 +100,11 @@ class ChatService:
                 role="ASSISTANT",
                 content=full_answer,
             )
+
+            # The first sources event was the retrieved set; now that we have
+            # the full answer, replace it with the ones actually cited.
+            final_sources = reconcile_sources(full_answer, sources)
+            yield f"data: {json.dumps({'type': 'sources', 'sources': final_sources})}\n\n"
 
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
