@@ -5,6 +5,7 @@ the API and must not share SQLAlchemy sessions with it.
 """
 
 from app.core.logging.logger import logger
+from app.core.observability import bind_context, new_request_id
 from app.db.session import SessionLocal
 
 
@@ -17,6 +18,7 @@ def process_document(document_id: int) -> None:
     """
     from app.services.document_service import DocumentService
 
+    bind_context(request_id=new_request_id(), job_id=f"process_document:{document_id}")
     logger.info("process_document start document_id=%s", document_id)
     db = SessionLocal()
     try:

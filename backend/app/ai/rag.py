@@ -108,18 +108,29 @@ def ask_question(
     user_id: int,
     conversation_id: int,
     conversation_history: str = "",
+    stats: dict | None = None,
 ):
-    context, sources = build_context(
-        question=question,
-        user_id=user_id,
-        conversation_id=conversation_id,
-    )
+    from app.core.observability import Timer
 
-    answer = generate_answer(
-        question=question,
-        context=context,
-        conversation_history=conversation_history,
-    )
+    with Timer() as retrieval:
+        context, sources = build_context(
+            question=question,
+            user_id=user_id,
+            conversation_id=conversation_id,
+        )
+
+    with Timer() as llm:
+        answer = generate_answer(
+            question=question,
+            context=context,
+            conversation_history=conversation_history,
+            stats=stats,
+        )
+
+    if stats is not None:
+        stats["retrieval_ms"] = retrieval.ms
+        stats["llm_ms"] = llm.ms
+        stats["context_chunks"] = len(sources)
 
     return {"answer": answer, "sources": reconcile_sources(answer, sources)}
 

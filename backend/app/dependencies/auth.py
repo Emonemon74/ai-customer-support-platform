@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.core.observability import set_context
 from app.core.security.jwt import decode_access_token
 from app.db.deps import get_db
 from app.models.user import User
@@ -45,5 +46,7 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
+
+    set_context(user_id=user.id)
 
     return user

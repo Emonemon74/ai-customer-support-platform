@@ -24,6 +24,7 @@ harness with measured before/after numbers, and CI.
 - [Evaluation](#evaluation)
 - [Authentication & data isolation](#authentication--data-isolation)
 - [Security](#security)
+- [Observability](#observability)
 - [API reference](#api-reference)
 - [Local development](#local-development)
 - [Testing & CI](#testing--ci)
@@ -204,6 +205,22 @@ that the victim's data is untouched.
   generic (no internal detail leaked).
 - **CORS** — origin allow-list via `BACKEND_CORS_ORIGINS`.
 
+## Observability
+
+- **Request ids** — every request gets an `X-Request-ID` (accepted from the
+  client if present, generated otherwise) and it is echoed on the response.
+- **Structured logs** — every log line carries `req`, `user` and `conv`;
+  background jobs bind their own `req` + `job_id`. The chat path logs
+  retrieval latency, LLM latency, prompt/completion tokens and whether the
+  model abstained; ingestion logs chunk count and processing time.
+- **`GET /metrics`** — a plain-text snapshot (Prometheus format) of in-process
+  counters: HTTP requests/errors by status, chat answers by outcome, LLM
+  tokens, document processing successes/failures, plus count/sum summaries for
+  request, retrieval, LLM and ingestion latency.
+
+Kept dependency-free on purpose — a full OpenTelemetry/Prometheus/Grafana
+stack is a later step, once there's somewhere to ship it.
+
 ## API reference
 
 All paths are prefixed with `/api/v1` except `/health`. Protected routes
@@ -270,7 +287,7 @@ npm run dev                    # http://localhost:5173
 
 ```bash
 cd backend
-uv run pytest                  # 39 tests: auth, isolation, chunking,
+uv run pytest                  # 42 tests: auth, isolation, chunking,
                                # live-Chroma retrieval, answer grounding
 uv run ruff check .
 ```
@@ -361,8 +378,9 @@ EFS for the shared upload/vector volume, the SPA on S3 + CloudFront.
       `chroma_db`)
 - [ ] Deploy to AWS
 - [x] Asynchronous ingestion (queue + worker) so large PDFs don't block upload
-- [ ] Structured request logging with request/user/conversation ids and
-      retrieval/LLM latency
+- [x] Structured request logging with request/user/conversation ids and
+      retrieval/LLM latency, plus a `/metrics` snapshot
+- [ ] Ship metrics/traces to a real backend (OpenTelemetry → Prometheus/Grafana)
 - [ ] Per-message citation history (sources currently reflect the latest answer)
 - [ ] Larger evaluation corpus and an LLM-judge answer grader
 ```

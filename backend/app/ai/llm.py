@@ -60,10 +60,19 @@ User question:
     ]
 
 
+def _record_usage(stats: dict | None, usage) -> None:
+    if stats is None or usage is None:
+        return
+    stats["prompt_tokens"] = getattr(usage, "prompt_tokens", None)
+    stats["completion_tokens"] = getattr(usage, "completion_tokens", None)
+    stats["total_tokens"] = getattr(usage, "total_tokens", None)
+
+
 def generate_answer(
     question: str,
     context: str,
     conversation_history: str = "",
+    stats: dict | None = None,
 ) -> str:
     response = client.chat.completions.create(
         model=settings.GROQ_MODEL,
@@ -75,6 +84,8 @@ def generate_answer(
         temperature=0,
     )
 
+    _record_usage(stats, getattr(response, "usage", None))
+
     return response.choices[0].message.content.strip()
 
 
@@ -82,6 +93,7 @@ def stream_answer(
     question: str,
     context: str,
     conversation_history: str = "",
+    stats: dict | None = None,
 ):
     stream = client.chat.completions.create(
         model=settings.GROQ_MODEL,
@@ -92,13 +104,17 @@ def stream_answer(
         ),
         temperature=0,
         stream=True,
+        stream_options={"include_usage": True},
     )
 
     for chunk in stream:
-        content = chunk.choices[0].delta.content
+        # The final usage-only chunk carries no choices.
+        if chunk.choices:
+            content = chunk.choices[0].delta.content
+            if content:
+                yield content
 
-        if content:
-            yield content
+        _record_usage(stats, getattr(chunk, "usage", None))
 
 
 def generate_conversation_title(question: str) -> str:

@@ -15,6 +15,7 @@ from app.core.exceptions.document import (
     UnsupportedFileTypeError,
 )
 from app.core.logging.logger import logger
+from app.core.observability import Timer, metrics, set_context
 from app.core.settings import settings
 from app.models.document import (
     STATUS_FAILED,
@@ -167,36 +168,55 @@ class DocumentService:
             logger.warning("process_document: document_id=%s not found", document_id)
             return
 
+        set_context(
+            document_id=document.id, conversation_id=document.conversation_id
+        )
+
         if document.status == STATUS_READY:
             return
 
         self.document_repository.update_status(document, STATUS_PROCESSING)
 
         try:
-            if document.file_type == "pdf":
-                # Clear anything a previous attempt may have indexed so a
-                # retry does not create duplicate chunks.
-                VectorStore().delete_document(
-                    document.id, user_id=document.uploaded_by
-                )
+            with Timer() as processing:
+                chunk_count = 0
 
-                pages = PDFParser.extract_pages(document.file_path)
-                chunks = TextChunker.chunk_pages(pages)
+                if document.file_type == "pdf":
+                    # Clear anything a previous attempt may have indexed so a
+                    # retry does not create duplicate chunks.
+                    VectorStore().delete_document(
+                        document.id, user_id=document.uploaded_by
+                    )
 
-                VectorStore().add_document(
-                    document_id=document.id,
-                    chunks=chunks,
-                    user_id=document.uploaded_by,
-                    conversation_id=document.conversation_id,
-                    filename=document.filename,
-                )
+                    pages = PDFParser.extract_pages(document.file_path)
+                    chunks = TextChunker.chunk_pages(pages)
+                    chunk_count = len(chunks)
+
+                    VectorStore().add_document(
+                        document_id=document.id,
+                        chunks=chunks,
+                        user_id=document.uploaded_by,
+                        conversation_id=document.conversation_id,
+                        filename=document.filename,
+                    )
 
             self.document_repository.update_status(document, STATUS_READY)
+
+            metrics.inc("document_processing_total", status="ready")
+            metrics.observe("document_processing_ms", processing.ms)
+            logger.info(
+                "document processed document_id=%s chunks=%s (%.0f ms)",
+                document.id,
+                chunk_count,
+                processing.ms,
+            )
 
         except Exception as error:
             self.document_repository.update_status(
                 document, STATUS_FAILED, str(error)[:1000]
             )
+            metrics.inc("document_processing_total", status="failed")
+            metrics.inc("document_processing_failures_total")
             raise
 
     def retry_document(
