@@ -140,6 +140,11 @@ documents change. Cache hit/miss ratio is in `/metrics`.
 | `RERANKER_MODEL` | `ms-marco-MiniLM-L-12-v2` | FlashRank cross-encoder |
 | `RETRIEVAL_MIN_SCORE` | `0.15` | rerank score below which context is dropped |
 
+Cross-encoders score vague "summarize this document" / "key points" queries near
+zero even when the passages are the right ones, so an explicit summary/overview
+request bypasses `RETRIEVAL_MIN_SCORE` and uses the fused top-N; the grounding
+prompt still keeps the answer to what's actually in the documents.
+
 ## Grounded answers
 
 - The system prompt tells the model to answer **only** from the provided
@@ -300,7 +305,7 @@ npm run dev                    # http://localhost:5173
 
 ```bash
 cd backend
-uv run pytest                  # 46 tests: auth, isolation, chunking,
+uv run pytest                  # 54 tests: auth, isolation, chunking,
                                # live-Chroma retrieval, answer grounding
 uv run ruff check .
 ```

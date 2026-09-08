@@ -23,9 +23,9 @@ type ChatWindowProps = {
 };
 
 const suggestedPrompts = [
-  "Summarize my uploaded document",
-  "What are the key skills mentioned?",
-  "Generate interview questions from this document",
+  "Summarize this document",
+  "What are the key points?",
+  "What does this document say about refunds or cancellations?",
   "Explain this document in simple words",
 ];
 

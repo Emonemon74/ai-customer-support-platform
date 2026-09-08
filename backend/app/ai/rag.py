@@ -56,6 +56,24 @@ def _is_relevant(result: dict) -> bool:
     return True
 
 
+# Cross-encoders score vague "summarize this" style queries near zero even when
+# the retrieved passages are exactly the right ones -- there's no specific claim
+# to match. For an explicit summary/overview request we skip the relevance gate
+# and let the grounding prompt keep the answer honest.
+_SUMMARY_INTENT = re.compile(
+    r"\b(summ?ari[sz]e|summary|overview|tl;?dr|key points?|main points?|gist|"
+    r"what(?:'?s| is) (?:this|the) (?:document|doc|file|pdf|policy|report)|"
+    r"what does (?:this|the) (?:document|doc|file|pdf|policy) (?:say|cover|contain)|"
+    r"explain (?:this|the) (?:document|doc|file|pdf|policy)|"
+    r"what is this (?:about|document))\b",
+    re.IGNORECASE,
+)
+
+
+def _looks_like_summary_request(question: str) -> bool:
+    return bool(_SUMMARY_INTENT.search(question))
+
+
 def _format_sources(results: list[dict]) -> list[dict]:
     """One entry per (document, page), in the order first seen."""
     sources: list[dict] = []
@@ -111,6 +129,9 @@ def _build_context_uncached(question: str, user_id: int, conversation_id: int):
     )
 
     relevant = [r for r in results if _is_relevant(r)]
+
+    if not relevant and results and _looks_like_summary_request(question):
+        relevant = results[: settings.RETRIEVAL_TOP_N]
 
     # Nothing cleared the relevance bar -> hand the model no context so it
     # takes the "not found in your documents" path instead of guessing.
