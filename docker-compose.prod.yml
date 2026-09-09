@@ -1,0 +1,111 @@
+name: ai-customer-support
+
+# Production stack: single host, managed Postgres (RDS), Caddy terminating TLS.
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Requires .env with DATABASE_URL (RDS), SITE_ADDRESS, ACME_EMAIL, GROQ_API_KEY,
+# SECRET_KEY. See deploy/README.md.
+
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "no"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  chroma:
+    image: chromadb/chroma:1.5.9
+    volumes:
+      - chroma_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "bash", "-c", "cat < /dev/null > /dev/tcp/localhost/8000"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL (RDS) in .env}
+      REDIS_URL: redis://redis:6379/0
+      CHROMA_HOST: chroma
+      CHROMA_PORT: "8000"
+      DOCUMENT_QUEUE_ASYNC: "true"
+      GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY in .env}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      BACKEND_CORS_ORIGINS: ${SITE_URL:?set SITE_URL (https://...) in .env}
+    volumes:
+      - uploads_data:/app/uploads
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  worker:
+    build: ./backend
+    command: ["python", "-m", "app.worker.main"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?set DATABASE_URL (RDS) in .env}
+      REDIS_URL: redis://redis:6379/0
+      CHROMA_HOST: chroma
+      CHROMA_PORT: "8000"
+      DOCUMENT_QUEUE_ASYNC: "true"
+      GROQ_API_KEY: ${GROQ_API_KEY:?set GROQ_API_KEY in .env}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
+      RUN_MIGRATIONS: "0"
+    volumes:
+      - uploads_data:/app/uploads
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    expose:
+      - "80"
+    restart: unless-stopped
+    depends_on:
+      - backend
+
+  # TLS termination + reverse proxy. Gets a real Let's Encrypt cert for
+  # SITE_ADDRESS (an <ip>.nip.io host works without registering a domain).
+  caddy:
+    image: caddy:2.8-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?set SITE_ADDRESS in .env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on:
+      - frontend
+
+volumes:
+  redis_data:
+  uploads_data:
+  chroma_data:
+  caddy_data:
+  caddy_config:

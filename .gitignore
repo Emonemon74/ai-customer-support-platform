@@ -187,3 +187,10 @@ backend/*.db
 backend/*.db-*
 __pycache__/
 *.pyc
+
+# Deploy secrets / state
+deploy/.env.prod
+deploy/terraform/.terraform/
+deploy/terraform/*.tfstate
+deploy/terraform/*.tfstate.*
+deploy/terraform/terraform.tfvars

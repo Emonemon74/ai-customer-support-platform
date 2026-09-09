@@ -1,0 +1,14 @@
+{
+	email {$ACME_EMAIL}
+}
+
+{$SITE_ADDRESS} {
+	encode gzip
+
+	# The frontend container (nginx) serves the SPA and already reverse-proxies
+	# /api and /health to the backend. Caddy just terminates TLS in front of it.
+	reverse_proxy frontend:80 {
+		# Stream Server-Sent Events straight through (chat responses).
+		flush_interval -1
+	}
+}

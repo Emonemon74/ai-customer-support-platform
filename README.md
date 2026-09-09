@@ -398,9 +398,20 @@ frontend preview with PM2.
 
 ### AWS
 
-Planned: ECS/Fargate for `backend` + `worker`, RDS Postgres, ElastiCache Redis,
-Chroma on Fargate with an EFS volume (or a hosted vector DB), EFS for the shared
-upload volume, the SPA on S3 + CloudFront.
+[`deploy/`](deploy/) has Terraform + a `docker-compose.prod.yml`: one EC2 host
+runs the stack, Postgres is managed (RDS), and Caddy terminates TLS with a real
+Let's Encrypt cert via an `<ip>.nip.io` hostname (no domain needed). Sized for
+the Free Tier. See [`deploy/README.md`](deploy/README.md).
+
+```bash
+cd deploy/terraform && terraform apply      # provision (~10 min)
+cp deploy/.env.prod.example deploy/.env.prod # fill from `terraform output`
+deploy/deploy.sh                             # rsync + compose up on the host
+```
+
+A cloud-native version (ECS/Fargate for `backend`/`worker`/`chroma`, ALB,
+ElastiCache, EFS, S3 + CloudFront) is the next step if it ever needs HA — ~5x
+the cost, not warranted yet.
 
 ## Roadmap
 
