@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import { Menu } from "lucide-react";
@@ -9,10 +9,12 @@ import { Sidebar } from "../../components/layout/Sidebar";
 import { streamQuestion } from "../../services/chat.service";
 import {
   createConversation,
+  getConversation,
   renameConversation,
   type Conversation,
 } from "../../services/conversation.service";
 import { getMessages, type Message } from "../../services/message.service";
+import { OPEN_CONVERSATION_KEY } from "../../utils/storageKeys";
 
 export function DashboardPage() {
   const [selectedConversation, setSelectedConversation] =
@@ -23,6 +25,28 @@ export function DashboardPage() {
   const abortRef = useRef<AbortController | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
+
+  // A guest who just clicked "Try the demo" lands in their sample conversation.
+  useEffect(() => {
+    const raw = sessionStorage.getItem(OPEN_CONVERSATION_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(OPEN_CONVERSATION_KEY);
+
+    const conversationId = Number(raw);
+
+    async function openConversation() {
+      try {
+        const conversation = await getConversation(conversationId);
+        setSelectedConversation(conversation);
+        setMessages(await getMessages(conversationId));
+        setSidebarRefreshKey((current) => current + 1);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    openConversation();
+  }, []);
 
   function handleNewChat() {
     setSelectedConversation(undefined);

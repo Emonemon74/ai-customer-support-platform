@@ -337,16 +337,17 @@ npm run dev                    # http://localhost:5173
 
 ```bash
 cd backend
-uv run pytest                  # 57 tests: auth, isolation, chunking,
+uv run pytest                  # 67 tests: auth, isolation, chunking,
                                # live-Chroma retrieval, answer grounding,
-                               # persisted citations, stream cancellation
+                               # persisted citations, stream cancellation,
+                               # demo sessions and usage limits
 uv run ruff check .
 ```
 
 ```bash
 cd frontend
 npm run lint
-npm test                      # 19 Vitest tests: SSE parser, citations, login
+npm test                      # 24 Vitest tests: SSE parser, citations, login, demo
 npm run build
 ```
 
