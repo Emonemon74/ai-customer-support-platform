@@ -26,8 +26,8 @@ export function SourceCitations({ sources }: Props) {
   if (uniqueSources.length === 0) return null;
 
   return (
-    <div className="border-t border-slate-200 bg-white p-4">
-      <p className="text-sm font-semibold text-slate-700">
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <p className="text-xs font-semibold text-slate-600">
         Sources <span className="font-normal text-slate-400">· grounded in your documents</span>
       </p>
 

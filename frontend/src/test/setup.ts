@@ -6,3 +6,6 @@ afterEach(() => {
   cleanup();
   localStorage.clear();
 });
+
+// jsdom has no layout engine, so scrollIntoView is missing.
+Element.prototype.scrollIntoView = () => {};

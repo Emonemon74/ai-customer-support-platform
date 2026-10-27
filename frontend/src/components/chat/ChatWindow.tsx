@@ -9,7 +9,6 @@ import remarkGfm from "remark-gfm";
 import { ChatInput } from "./ChatInput";
 import { SourceCitations } from "./SourceCitations";
 
-import type { Source } from "../../services/chat.service";
 import type { Message } from "../../services/message.service";
 
 const HighlightedCode = lazy(() => import("./HighlightedCode"));
@@ -20,7 +19,6 @@ type ChatWindowProps = {
   disabled?: boolean;
   onSend: (question: string) => Promise<void>;
   onStop?: () => void;
-  sources: Source[];
 };
 
 const suggestedPrompts = [
@@ -36,7 +34,6 @@ export function ChatWindow({
   disabled,
   onSend,
   onStop,
-  sources,
 }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -229,6 +226,8 @@ export function ChatWindow({
                       {message.content}
                     </ReactMarkdown>
                   </div>
+
+                  {!isUser && <SourceCitations sources={message.sources ?? []} />}
                 </div>
 
                 {!isUser && (
@@ -272,8 +271,6 @@ export function ChatWindow({
 
         <div ref={bottomRef} />
       </div>
-
-      <SourceCitations sources={sources} />
 
       <ChatInput disabled={disabled} onSend={onSend} onStop={onStop} />
     </main>

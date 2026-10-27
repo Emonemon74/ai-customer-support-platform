@@ -6,7 +6,7 @@ import { Menu } from "lucide-react";
 import { ChatWindow } from "../../components/chat/ChatWindow";
 import { Header } from "../../components/layout/Header";
 import { Sidebar } from "../../components/layout/Sidebar";
-import { streamQuestion, type Source } from "../../services/chat.service";
+import { streamQuestion } from "../../services/chat.service";
 import {
   createConversation,
   renameConversation,
@@ -14,22 +14,11 @@ import {
 } from "../../services/conversation.service";
 import { getMessages, type Message } from "../../services/message.service";
 
-// Citations belong to the most recent assistant answer; restore them from the
-// persisted messages so they survive a reload or conversation switch.
-function latestSources(messages: Message[]): Source[] {
-  const lastAssistant = [...messages]
-    .reverse()
-    .find((message) => message.role === "ASSISTANT");
-
-  return lastAssistant?.sources ?? [];
-}
-
 export function DashboardPage() {
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation>();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -38,7 +27,6 @@ export function DashboardPage() {
   function handleNewChat() {
     setSelectedConversation(undefined);
     setMessages([]);
-    setSources([]);
   }
 
   function handleConversationDeleted(conversationId: number) {
@@ -49,13 +37,11 @@ export function DashboardPage() {
 
   async function handleSelectConversation(conversation: Conversation) {
     setSelectedConversation(conversation);
-    setSources([]);
     setIsSidebarOpen(false);
 
     try {
       const data = await getMessages(conversation.id);
       setMessages(data);
-      setSources(latestSources(data));
     } catch (error) {
       console.error(error);
       toast.error("Failed to load messages");
@@ -71,7 +57,6 @@ export function DashboardPage() {
 
     setSelectedConversation(renamedConversation);
     setMessages([]);
-    setSources([]);
     setSidebarRefreshKey((current) => current + 1);
 
     return renamedConversation.id;
@@ -85,7 +70,6 @@ export function DashboardPage() {
     const controller = new AbortController();
     abortRef.current = controller;
     setLoading(true);
-    setSources([]);
 
     try {
       let conversation = selectedConversation;
@@ -114,10 +98,13 @@ export function DashboardPage() {
 
       setMessages((current) => [...current, userMessage, assistantMessage]);
 
+      let sawTokens = false;
+
       await streamQuestion(
         conversation.id,
         question,
         (token) => {
+          sawTokens = true;
           setMessages((current) =>
             current.map((message) =>
               message.id === assistantMessage.id
@@ -129,13 +116,24 @@ export function DashboardPage() {
             )
           );
         },
-        setSources,
+        (answerSources) => {
+          // The first event is the retrieved set, sent before any text. Only
+          // the one after the answer (the cited set) belongs under it.
+          if (!sawTokens) return;
+
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === assistantMessage.id
+                ? { ...message, sources: answerSources }
+                : message
+            )
+          );
+        },
         controller.signal
       );
 
       const updatedMessages = await getMessages(conversation.id);
       setMessages(updatedMessages);
-      setSources(latestSources(updatedMessages));
     } catch (error) {
       if (controller.signal.aborted) {
         // User pressed Stop: keep the partial answer already on screen. The
@@ -221,7 +219,6 @@ export function DashboardPage() {
           disabled={loading}
           onSend={handleSend}
           onStop={handleStop}
-          sources={sources}
         />
       </div>
     </div>

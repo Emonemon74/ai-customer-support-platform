@@ -346,7 +346,7 @@ uv run ruff check .
 ```bash
 cd frontend
 npm run lint
-npm test                      # 17 Vitest tests: SSE parser, citations, login
+npm test                      # 19 Vitest tests: SSE parser, citations, login
 npm run build
 ```
 
@@ -452,6 +452,6 @@ the cost, not warranted yet.
 - [x] Structured request logging with request/user/conversation ids and
       retrieval/LLM latency, plus a `/metrics` snapshot
 - [ ] Ship metrics/traces to a real backend (OpenTelemetry → Prometheus/Grafana)
-- [ ] Per-message citation chips in the UI (sources are persisted on every answer; the UI shows the latest answer's)
+- [x] Per-message citation history (sources are persisted with each answer and shown under it)
 - [ ] Larger evaluation corpus and an LLM-judge answer grader
 ```
