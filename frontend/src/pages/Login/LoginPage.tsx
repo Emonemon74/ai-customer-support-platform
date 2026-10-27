@@ -81,11 +81,12 @@ export function LoginPage() {
         <form onSubmit={handleSubmit} className="mt-8 space-y-5">
           {isSignupMode && (
             <div>
-              <label className="block text-sm font-medium text-slate-700">
+              <label htmlFor="full-name" className="block text-sm font-medium text-slate-700">
                 Full Name
               </label>
               <input
                 type="text"
+                id="full-name"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
                 placeholder="Emon Dewan"
@@ -96,11 +97,12 @@ export function LoginPage() {
           )}
 
           <div>
-            <label className="block text-sm font-medium text-slate-700">
+            <label htmlFor="email" className="block text-sm font-medium text-slate-700">
               Email
             </label>
             <input
               type="email"
+              id="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder="emon@example.com"
@@ -110,11 +112,12 @@ export function LoginPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700">
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700">
               Password
             </label>
             <input
               type="password"
+              id="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="password123"
