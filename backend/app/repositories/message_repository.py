@@ -13,11 +13,13 @@ class MessageRepository:
         conversation_id: int,
         role: str,
         content: str,
+        sources: list[dict] | None = None,
     ) -> Message:
         message = Message(
             conversation_id=conversation_id,
             role=role,
             content=content,
+            sources=sources,
         )
 
         self.db.add(message)

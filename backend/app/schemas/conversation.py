@@ -26,6 +26,7 @@ class MessageResponse(BaseModel):
     conversation_id: int
     role: str
     content: str
+    sources: list[dict] | None = None
     created_at: datetime
 
     class Config:

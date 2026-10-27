@@ -14,6 +14,16 @@ import {
 } from "../../services/conversation.service";
 import { getMessages, type Message } from "../../services/message.service";
 
+// Citations belong to the most recent assistant answer; restore them from the
+// persisted messages so they survive a reload or conversation switch.
+function latestSources(messages: Message[]): Source[] {
+  const lastAssistant = [...messages]
+    .reverse()
+    .find((message) => message.role === "ASSISTANT");
+
+  return lastAssistant?.sources ?? [];
+}
+
 export function DashboardPage() {
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation>();
@@ -44,6 +54,7 @@ export function DashboardPage() {
     try {
       const data = await getMessages(conversation.id);
       setMessages(data);
+      setSources(latestSources(data));
     } catch (error) {
       console.error(error);
       toast.error("Failed to load messages");
@@ -116,6 +127,7 @@ export function DashboardPage() {
 
       const updatedMessages = await getMessages(conversation.id);
       setMessages(updatedMessages);
+      setSources(latestSources(updatedMessages));
     } catch (error) {
       console.error(error);
       toast.error("Failed to stream response");

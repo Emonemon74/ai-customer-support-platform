@@ -76,7 +76,9 @@ class ChatService:
             stats=stats,
         )
 
-        self.message_repository.create(conversation_id, "ASSISTANT", result["answer"])
+        self.message_repository.create(
+            conversation_id, "ASSISTANT", result["answer"], sources=result["sources"]
+        )
         self._log_answer(conversation_id, stats, result["answer"])
 
         return result
@@ -133,15 +135,16 @@ class ChatService:
                     yield f"data: {token_payload}\n\n"
             stats["llm_ms"] = llm.ms
 
+            # The first sources event was the retrieved set; now that we have
+            # the full answer, replace it with the ones actually cited.
+            final_sources = reconcile_sources(full_answer, sources)
+
             self.message_repository.create(
                 conversation_id=conversation_id,
                 role="ASSISTANT",
                 content=full_answer,
+                sources=final_sources,
             )
-
-            # The first sources event was the retrieved set; now that we have
-            # the full answer, replace it with the ones actually cited.
-            final_sources = reconcile_sources(full_answer, sources)
             yield f"data: {json.dumps({'type': 'sources', 'sources': final_sources})}\n\n"
 
             yield f"data: {json.dumps({'type': 'done'})}\n\n"

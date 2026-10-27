@@ -1,10 +1,12 @@
 import { api } from "../api/client";
+import type { Source } from "./chat.service";
 
 export type Message = {
   id: number;
   conversation_id: number;
   role: "USER" | "ASSISTANT";
   content: string;
+  sources?: Source[] | null;
   created_at: string;
 };
 
