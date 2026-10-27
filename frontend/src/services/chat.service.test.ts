@@ -94,3 +94,25 @@ describe("streamQuestion", () => {
     );
   });
 });
+
+describe("streamQuestion cancellation", () => {
+  it("passes the abort signal to fetch and rejects when aborted", async () => {
+    const controller = new AbortController();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_url: string, init: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () =>
+            reject(new DOMException("Aborted", "AbortError"))
+          );
+        })
+      )
+    );
+
+    const pending = streamQuestion(1, "hi", () => {}, undefined, controller.signal);
+    controller.abort();
+
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+    expect(vi.mocked(fetch).mock.calls[0][1]?.signal).toBe(controller.signal);
+  });
+});

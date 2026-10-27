@@ -19,6 +19,7 @@ type ChatWindowProps = {
   messages: Message[];
   disabled?: boolean;
   onSend: (question: string) => Promise<void>;
+  onStop?: () => void;
   sources: Source[];
 };
 
@@ -34,6 +35,7 @@ export function ChatWindow({
   messages,
   disabled,
   onSend,
+  onStop,
   sources,
 }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -81,7 +83,7 @@ export function ChatWindow({
         </h2>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-6 sm:px-6">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
             <div className="w-full max-w-3xl rounded-2xl bg-white px-8 py-8 shadow-sm">
@@ -256,7 +258,7 @@ export function ChatWindow({
           })
         )}
 
-        {disabled && messages.length > 0 && (
+        {disabled && messages.at(-1)?.content === "" && (
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm">
               <Bot size={20} />
@@ -273,7 +275,7 @@ export function ChatWindow({
 
       <SourceCitations sources={sources} />
 
-      <ChatInput disabled={disabled} onSend={onSend} />
+      <ChatInput disabled={disabled} onSend={onSend} onStop={onStop} />
     </main>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import { Menu } from "lucide-react";
@@ -31,6 +31,7 @@ export function DashboardPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
 
@@ -76,7 +77,13 @@ export function DashboardPage() {
     return renamedConversation.id;
   }
 
+  function handleStop() {
+    abortRef.current?.abort();
+  }
+
   async function handleSend(question: string) {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
     setSources([]);
 
@@ -122,13 +129,20 @@ export function DashboardPage() {
             )
           );
         },
-        setSources
+        setSources,
+        controller.signal
       );
 
       const updatedMessages = await getMessages(conversation.id);
       setMessages(updatedMessages);
       setSources(latestSources(updatedMessages));
     } catch (error) {
+      if (controller.signal.aborted) {
+        // User pressed Stop: keep the partial answer already on screen. The
+        // server saves it too, so it is there when the conversation reloads.
+        return;
+      }
+
       console.error(error);
       toast.error("Failed to stream response");
       setMessages((current) =>
@@ -206,6 +220,7 @@ export function DashboardPage() {
           messages={messages}
           disabled={loading}
           onSend={handleSend}
+          onStop={handleStop}
           sources={sources}
         />
       </div>

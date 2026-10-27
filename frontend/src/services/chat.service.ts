@@ -43,7 +43,8 @@ export async function streamQuestion(
   conversationId: number,
   question: string,
   onToken: (token: string) => void,
-  onSources?: (sources: Source[]) => void
+  onSources?: (sources: Source[]) => void,
+  signal?: AbortSignal
 ) {
   const token = localStorage.getItem("access_token");
 
@@ -57,6 +58,7 @@ export async function streamQuestion(
       conversation_id: conversationId,
       question,
     }),
+    signal,
   });
 
   if (!response.ok) {

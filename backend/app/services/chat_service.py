@@ -99,6 +99,7 @@ class ChatService:
         conversation_history = self.build_conversation_history(conversation_id)
 
         full_answer = ""
+        sources: list[dict] = []
         stats: dict = {}
 
         try:
@@ -150,6 +151,19 @@ class ChatService:
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
             self._log_answer(conversation_id, stats, full_answer)
+
+        except GeneratorExit:
+            # The client went away (e.g. pressed "Stop"). Keep what was
+            # generated so the partial answer is still there on reload.
+            metrics.inc("chat_answers_total", outcome="cancelled")
+            if full_answer.strip():
+                self.message_repository.create(
+                    conversation_id=conversation_id,
+                    role="ASSISTANT",
+                    content=full_answer,
+                    sources=reconcile_sources(full_answer, sources),
+                )
+            raise
 
         except Exception:
             metrics.inc("chat_answers_total", outcome="error")

@@ -68,3 +68,22 @@ def test_reload_matches_live_sources_event(client, user_a, monkeypatch):
 
     assistant_message = _messages(client, user_a, conversation_id)[-1]
     assert assistant_message["sources"] == final_sources == [OTHER]
+
+
+def test_cancelled_stream_keeps_the_partial_answer(db, user_a, client, monkeypatch):
+    from app.models.user import User
+    from app.services.chat_service import ChatService
+
+    _stub_pipeline(monkeypatch, ["Refunds take ", "30 days ", "[policy.pdf, page 4]."])
+    conversation_id = make_conversation(client, user_a)
+    user = db.query(User).filter(User.email == "user_a@example.com").one()
+
+    stream = ChatService(db).stream(conversation_id, "Refund period?", user)
+    next(stream)  # sources
+    next(stream)  # first token
+    next(stream)  # second token
+    stream.close()  # client disconnects
+
+    assistant = _messages(client, user_a, conversation_id)[-1]
+    assert assistant["role"] == "ASSISTANT"
+    assert assistant["content"] == "Refunds take 30 days "

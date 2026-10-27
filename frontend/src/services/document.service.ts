@@ -19,7 +19,11 @@ export type Document = {
   updated_at: string | null;
 };
 
-export async function uploadDocument(file: File, conversationId: number) {
+export async function uploadDocument(
+  file: File,
+  conversationId: number,
+  onProgress?: (percent: number) => void
+) {
   const formData = new FormData();
   formData.append("file", file);
   formData.append("conversation_id", String(conversationId));
@@ -30,6 +34,11 @@ export async function uploadDocument(file: File, conversationId: number) {
     {
       headers: {
         "Content-Type": "multipart/form-data",
+      },
+      onUploadProgress: (event) => {
+        if (event.total) {
+          onProgress?.(Math.round((event.loaded / event.total) * 100));
+        }
       },
     }
   );
