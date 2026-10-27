@@ -1,0 +1,77 @@
+name: Deploy
+
+# Deploys main to the EC2 host after CI passes on main. Can also be run by hand.
+#
+# Repository secrets (Settings -> Secrets and variables -> Actions):
+#   DEPLOY_HOST     elastic IP of the app host      (terraform output app_ip)
+#   DEPLOY_SSH_KEY  private key matching the host's key pair (~/.ssh/aicsp)
+#   PROD_ENV        full contents of deploy/.env.prod
+#   SITE_ADDRESS    public hostname, no scheme      (terraform output site_address)
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy to production
+    # For workflow_run, only deploy when CI actually passed.
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      REMOTE_DIR: /opt/app
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Configure SSH
+        run: |
+          install -m 700 -d ~/.ssh
+          echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.DEPLOY_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync code to host
+        run: |
+          rsync -az --delete \
+            --exclude '.git' --exclude 'node_modules' --exclude 'frontend/dist' \
+            --exclude 'backend/.venv' --exclude 'backend/chroma_db' \
+            --exclude 'backend/uploads' --exclude '*.db' --exclude '.env' \
+            --exclude 'deploy/.env.prod' --exclude '.github' \
+            -e "ssh -i ~/.ssh/deploy_key" \
+            ./ "ec2-user@${{ secrets.DEPLOY_HOST }}:${REMOTE_DIR}/"
+
+      - name: Write environment file
+        run: |
+          printf '%s\n' "${{ secrets.PROD_ENV }}" > /tmp/prod.env
+          scp -i ~/.ssh/deploy_key /tmp/prod.env "ec2-user@${{ secrets.DEPLOY_HOST }}:${REMOTE_DIR}/.env"
+          rm /tmp/prod.env
+
+      - name: Build and restart stack
+        run: |
+          ssh -i ~/.ssh/deploy_key "ec2-user@${{ secrets.DEPLOY_HOST }}" bash -s <<'REMOTE'
+          set -euo pipefail
+          cd /opt/app
+          docker compose -f docker-compose.prod.yml up -d --build
+          docker compose -f docker-compose.prod.yml ps
+          REMOTE
+
+      - name: Smoke test
+        run: |
+          for attempt in $(seq 1 30); do
+            if curl -fsS "https://${{ secrets.SITE_ADDRESS }}/health"; then
+              echo; echo "healthy after ${attempt} attempt(s)"; exit 0
+            fi
+            sleep 10
+          done
+          echo "health check failed" >&2
+          exit 1

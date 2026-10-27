@@ -71,6 +71,26 @@ Rsyncs the repo to the host, writes `.env`, and runs
 Visit `https://<SITE_ADDRESS>`. Redeploy after code changes with the same
 command.
 
+## Continuous deployment (optional)
+
+[`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) redeploys the
+host whenever CI passes on `main` (or when run by hand from the Actions tab),
+then smoke-tests `https://<SITE_ADDRESS>/health`. Add these repository secrets
+first:
+
+| Secret | Value |
+|---|---|
+| `DEPLOY_HOST` | `terraform output -raw app_ip` |
+| `DEPLOY_SSH_KEY` | contents of `~/.ssh/aicsp` (the private key) |
+| `PROD_ENV` | full contents of `deploy/.env.prod` |
+| `SITE_ADDRESS` | `terraform output -raw site_address` |
+
+The job uses a `production` environment, so you can require a manual approval
+under Settings → Environments. This workflow has not been run yet: it needs a
+provisioned host. The SSH rule in the security group only allows
+`ssh_ingress_cidr`, so GitHub-hosted runners can't reach port 22 unless you
+widen that CIDR or use a self-hosted runner.
+
 ## Operating
 
 ```bash

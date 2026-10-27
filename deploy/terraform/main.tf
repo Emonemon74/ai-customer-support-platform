@@ -118,9 +118,10 @@ resource "aws_db_instance" "postgres" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [aws_security_group.db.id]
   publicly_accessible    = false
+  storage_encrypted      = true
   multi_az               = false
   skip_final_snapshot    = true
-  apply_immediately       = true
+  apply_immediately      = true
   deletion_protection    = false
 }
 
@@ -136,6 +137,14 @@ resource "aws_instance" "app" {
   root_block_device {
     volume_size = 30
     volume_type = "gp3"
+    encrypted   = true
+  }
+
+  # Require IMDSv2 so a server-side request forgery can't read instance
+  # credentials with a plain GET.
+  metadata_options {
+    http_tokens   = "required"
+    http_endpoint = "enabled"
   }
 
   tags = {
