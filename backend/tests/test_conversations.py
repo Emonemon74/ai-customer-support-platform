@@ -38,3 +38,16 @@ def test_missing_conversation_returns_404(client, user_a):
         ).status_code
         == 404
     )
+
+
+def test_get_conversation_by_id(client, user_a):
+    conversation_id = make_conversation(client, user_a)
+    response = client.get(f"/api/v1/conversations/{conversation_id}", headers=user_a)
+    assert response.status_code == 200
+    assert response.json()["id"] == conversation_id
+
+
+def test_get_conversation_of_another_user_is_404(client, user_a, user_b):
+    conversation_id = make_conversation(client, user_a)
+    response = client.get(f"/api/v1/conversations/{conversation_id}", headers=user_b)
+    assert response.status_code == 404

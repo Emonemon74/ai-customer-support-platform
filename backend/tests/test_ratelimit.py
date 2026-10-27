@@ -8,7 +8,7 @@ def test_auth_endpoint_is_rate_limited(client, monkeypatch):
     payload = {"email": "spam@example.com", "password": "wrong-password"}
 
     statuses = [
-        client.post("/api/v1/auth", json=payload).status_code for _ in range(12)
+        client.post("/api/v1/auth/login", json=payload).status_code for _ in range(12)
     ]
 
     assert 429 in statuses

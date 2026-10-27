@@ -1,8 +1,20 @@
 import { useState } from "react";
+import axios from "axios";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 
-import { authenticate } from "../../services/auth.service";
+import { login, register } from "../../services/auth.service";
+
+function authErrorMessage(error: unknown, isSignupMode: boolean) {
+  const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+
+  if (status === 409) return "An account with this email already exists";
+  if (status === 401) return "Invalid email or password";
+  if (status === 422) return "Check your details — password needs 8+ characters";
+  if (status === 429) return "Too many attempts — try again in a minute";
+
+  return isSignupMode ? "Signup failed" : "Login failed";
+}
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -27,11 +39,9 @@ export function LoginPage() {
     try {
       setLoading(true);
 
-      const response = await authenticate({
-        full_name: isSignupMode ? fullName : undefined,
-        email,
-        password,
-      });
+      const response = isSignupMode
+        ? await register({ full_name: fullName.trim(), email, password })
+        : await login({ email, password });
 
       localStorage.setItem("access_token", response.access_token);
 
@@ -42,9 +52,7 @@ export function LoginPage() {
       navigate("/dashboard");
     } catch (error) {
       console.error(error);
-      toast.error(
-        isSignupMode ? "Signup failed" : "Login failed"
-      );
+      toast.error(authErrorMessage(error, isSignupMode));
     } finally {
       setLoading(false);
     }
@@ -110,6 +118,7 @@ export function LoginPage() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
               placeholder="password123"
+              minLength={isSignupMode ? 8 : undefined}
               className="mt-1 w-full rounded-lg border border-slate-300 px-4 py-3 outline-none focus:border-slate-900"
               required
             />

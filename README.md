@@ -192,7 +192,7 @@ ability to decline. See [`backend/eval/README.md`](backend/eval/README.md).
 
 ```mermaid
 flowchart TB
-    L["POST /api/v1/auth"] --> T["JWT (sub=email, iat, exp)"]
+    L["POST /api/v1/auth/login<br/>or /register"] --> T["JWT (sub=email, iat, exp)"]
     T --> RQ["request + Bearer token"]
     RQ --> GU["get_current_user<br/>decode → load user"]
     GU --> AZ["require_owned_conversation / _document"]
@@ -251,12 +251,14 @@ require `Authorization: Bearer <token>`.
 | Method | Path | Description |
 | --- | --- | --- |
 | `GET` | `/health` | Health check |
-| `POST` | `/auth` | Login or signup → `{ access_token }` |
+| `POST` | `/auth/register` | Create account (`full_name`, `email`, `password` ≥ 8) → `201 { access_token }`; `409` if the email exists |
+| `POST` | `/auth/login` | `{ email, password }` → `{ access_token }`; `401` for any bad credential (same message for unknown email) |
 | `GET` | `/users/me` | Current user |
 | `POST` | `/conversations` | Create conversation (title auto-generated) |
 | `GET` | `/conversations` | List the caller's conversations |
 | `GET` | `/conversations/search?q=` | Search by title |
-| `GET` | `/conversations/{id}/messages` | Message history |
+| `GET` | `/conversations/{id}` | Conversation detail |
+| `GET` | `/conversations/{id}/messages` | Message history, including each answer's persisted `sources` |
 | `PATCH` | `/conversations/{id}` | Rename |
 | `DELETE` | `/conversations/{id}` | Delete (cascades documents + messages) |
 | `POST` | `/documents/upload` | Upload a PDF into a conversation |

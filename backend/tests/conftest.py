@@ -88,10 +88,10 @@ def client():
 
 def _register(client: TestClient, email: str) -> str:
     response = client.post(
-        "/api/v1/auth",
+        "/api/v1/auth/register",
         json={"full_name": "Test User", "email": email, "password": "pw-12345"},
     )
-    assert response.status_code == 200, response.text
+    assert response.status_code == 201, response.text
     return response.json()["access_token"]
 
 
