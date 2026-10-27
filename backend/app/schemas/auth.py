@@ -11,9 +11,14 @@ class UserResponse(BaseModel):
     full_name: str
     email: EmailStr
     is_active: bool
+    is_demo: bool = False
 
     class Config:
         from_attributes = True
+
+
+class DemoSessionResponse(TokenResponse):
+    conversation_id: int
 
 
 class RegisterRequest(BaseModel):

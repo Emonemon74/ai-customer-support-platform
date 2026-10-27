@@ -17,6 +17,7 @@ from app.core.exceptions.document import (
     FileTooLargeError,
     UnsupportedFileTypeError,
 )
+from app.core.exceptions.quota import CapacityError, QuotaExceededError
 
 
 def register_exception_handlers(app: FastAPI) -> None:
@@ -172,5 +173,29 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "message": exc.message,
                 "data": None,
                 "error_code": "CONV_004",
+            },
+        )
+
+    @app.exception_handler(QuotaExceededError)
+    async def quota_exceeded_handler(request: Request, exc: QuotaExceededError):
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "success": False,
+                "message": exc.message,
+                "data": None,
+                "error_code": "QUOTA_001",
+            },
+        )
+
+    @app.exception_handler(CapacityError)
+    async def capacity_handler(request: Request, exc: CapacityError):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "success": False,
+                "message": exc.message,
+                "data": None,
+                "error_code": "QUOTA_002",
             },
         )

@@ -47,6 +47,21 @@ class Settings(BaseSettings):
     RATE_LIMIT_AUTH_PER_MINUTE: int = 10
     RATE_LIMIT_CHAT_PER_MINUTE: int = 30
 
+    RATE_LIMIT_DEMO_PER_MINUTE: int = 5
+
+    # --- Public demo & usage limits ---------------------------------------
+    # Demo mode lets a visitor start a throw-away guest session pre-loaded with
+    # sample documents. Guests are purged after DEMO_USER_TTL_HOURS.
+    DEMO_ENABLED: bool = False
+    DEMO_USER_TTL_HOURS: int = 24
+    DEMO_MAX_MESSAGES: int = 30  # chat questions per guest session
+    DEMO_MAX_FILE_MB: int = 2
+    # Applies to everyone.
+    MAX_DOCUMENTS_PER_USER: int = 25
+    # Hard ceiling on chat questions per UTC day across all users, protecting
+    # the LLM key from a flood. 0 disables the ceiling.
+    GLOBAL_DAILY_CHAT_LIMIT: int = 0
+
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     BACKEND_CORS_ORIGIN_REGEX: str = ""
 

@@ -1,5 +1,8 @@
+from datetime import datetime
+
 from sqlalchemy.orm import Session
 
+from app.models.conversation import Conversation
 from app.models.message import Message
 
 
@@ -54,6 +57,22 @@ class MessageRepository:
         )
 
 
+
+    def count_questions_by_user(self, user_id: int) -> int:
+        """USER messages across all of one user's conversations."""
+        return (
+            self.db.query(Message)
+            .join(Conversation, Conversation.id == Message.conversation_id)
+            .filter(Conversation.user_id == user_id, Message.role == "USER")
+            .count()
+        )
+
+    def count_questions_since(self, since: datetime) -> int:
+        return (
+            self.db.query(Message)
+            .filter(Message.role == "USER", Message.created_at >= since)
+            .count()
+        )
 
     def delete_by_conversation(
         self,

@@ -53,6 +53,10 @@ def stream_chat(
         current_user=current_user,
     )
 
+    # Raised here (not inside the generator) so it becomes a real 429/503
+    # response instead of a half-open event stream.
+    chat_service.enforce_quota(current_user)
+
     stream = chat_service.stream(
         conversation_id=request.conversation_id,
         question=request.question,

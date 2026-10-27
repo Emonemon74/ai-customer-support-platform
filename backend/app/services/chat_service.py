@@ -1,13 +1,16 @@
 import json
 import logging
 from collections.abc import Generator
+from datetime import datetime
 
 from sqlalchemy.orm import Session
 
 from app.ai.llm import FALLBACK_ANSWER, stream_answer
 from app.ai.rag import ask_question, build_context, reconcile_sources
 from app.core.authz import require_owned_conversation
+from app.core.exceptions.quota import CapacityError, QuotaExceededError
 from app.core.observability import Timer, metrics, set_context
+from app.core.settings import settings
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
@@ -22,6 +25,30 @@ class ChatService:
         self.db = db
         self.conversation_repository = ConversationRepository(db)
         self.message_repository = MessageRepository(db)
+
+    def enforce_quota(self, current_user: User) -> None:
+        """Raise before any work happens if a usage limit is hit."""
+        if (
+            settings.GLOBAL_DAILY_CHAT_LIMIT
+            and self.message_repository.count_questions_since(
+                datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            )
+            >= settings.GLOBAL_DAILY_CHAT_LIMIT
+        ):
+            raise CapacityError(
+                "The demo has reached its daily question budget. "
+                "Please try again tomorrow."
+            )
+
+        if (
+            current_user.is_demo
+            and self.message_repository.count_questions_by_user(current_user.id)
+            >= settings.DEMO_MAX_MESSAGES
+        ):
+            raise QuotaExceededError(
+                f"Demo limit reached ({settings.DEMO_MAX_MESSAGES} questions). "
+                "Create an account to keep going."
+            )
 
     def validate_conversation_access(self, conversation_id: int, current_user: User):
         return require_owned_conversation(self.db, conversation_id, current_user.id)
@@ -61,6 +88,7 @@ class ChatService:
 
     def ask(self, conversation_id: int, question: str, current_user: User):
         self.validate_conversation_access(conversation_id, current_user)
+        self.enforce_quota(current_user)
         set_context(user_id=current_user.id, conversation_id=conversation_id)
 
         self.message_repository.create(conversation_id, "USER", question)

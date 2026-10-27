@@ -6,6 +6,7 @@ from fastapi.responses import PlainTextResponse
 
 from app.api.v1.auth import router as auth_router
 from app.api.v1.chat import router as chat_router
+from app.api.v1.config import router as config_router
 from app.api.v1.conversations import router as conversations_router
 from app.api.v1.documents import router as documents_router
 from app.api.v1.health import router as health_router
@@ -99,6 +100,7 @@ def metrics_endpoint() -> str:
 
 
 app.include_router(health_router)
+app.include_router(config_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(documents_router)

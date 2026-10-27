@@ -15,6 +15,7 @@ from app.core.exceptions.document import (
     FileTooLargeError,
     UnsupportedFileTypeError,
 )
+from app.core.exceptions.quota import QuotaExceededError
 from app.core.logging.logger import logger
 from app.core.observability import Timer, metrics, set_context
 from app.core.settings import settings
@@ -56,7 +57,7 @@ class DocumentService:
         self.conversation_repository = ConversationRepository(db)
         self.document_repository = DocumentRepository(db)
 
-    def validate_file(self, file: UploadFile) -> str:
+    def validate_file(self, file: UploadFile, max_size: int = MAX_FILE_SIZE) -> str:
         """Validate type and size, returning the resolved file extension."""
         extension = ALLOWED_CONTENT_TYPES.get(file.content_type)
 
@@ -76,13 +77,25 @@ class DocumentService:
         if file_size == 0:
             raise UnsupportedFileTypeError("Uploaded file is empty")
 
-        if file_size > MAX_FILE_SIZE:
-            raise FileTooLargeError()
+        if file_size > max_size:
+            raise FileTooLargeError(
+                f"File size exceeds {max_size // (1024 * 1024)} MB"
+            )
 
         return extension
 
     def validate_conversation_access(self, conversation_id: int, current_user: User):
         return require_owned_conversation(self.db, conversation_id, current_user.id)
+
+    def _enforce_upload_quota(self, current_user: User) -> None:
+        if (
+            self.document_repository.count_by_user(current_user.id)
+            >= settings.MAX_DOCUMENTS_PER_USER
+        ):
+            raise QuotaExceededError(
+                f"Document limit reached ({settings.MAX_DOCUMENTS_PER_USER}). "
+                "Delete a document or conversation to upload more."
+            )
 
     def _write_to_disk(self, file: UploadFile, file_path: str) -> str:
         """Stream the upload to disk, returning its SHA-256 hex digest."""
@@ -112,7 +125,13 @@ class DocumentService:
         ``DOCUMENT_QUEUE_ASYNC`` is off).
         """
         self.validate_conversation_access(conversation_id, current_user)
-        file_extension = self.validate_file(file)
+        self._enforce_upload_quota(current_user)
+        max_size = (
+            settings.DEMO_MAX_FILE_MB * 1024 * 1024
+            if current_user.is_demo
+            else MAX_FILE_SIZE
+        )
+        file_extension = self.validate_file(file, max_size)
 
         os.makedirs(UPLOAD_DIR, exist_ok=True)
 

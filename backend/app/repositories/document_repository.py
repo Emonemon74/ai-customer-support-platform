@@ -58,6 +58,9 @@ class DocumentRepository:
             .first()
         )
 
+    def count_by_user(self, user_id: int) -> int:
+        return self.db.query(Document).filter(Document.uploaded_by == user_id).count()
+
     def get_by_id(self, document_id: int) -> Document | None:
         return (
             self.db.query(Document)

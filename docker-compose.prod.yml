@@ -41,6 +41,10 @@ services:
       GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-120b}
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in .env}
       BACKEND_CORS_ORIGINS: ${SITE_URL:?set SITE_URL (https://...) in .env}
+      DEMO_ENABLED: ${DEMO_ENABLED:-false}
+      DEMO_MAX_MESSAGES: ${DEMO_MAX_MESSAGES:-30}
+      DEMO_USER_TTL_HOURS: ${DEMO_USER_TTL_HOURS:-24}
+      GLOBAL_DAILY_CHAT_LIMIT: ${GLOBAL_DAILY_CHAT_LIMIT:-0}
     volumes:
       - uploads_data:/app/uploads
     restart: unless-stopped
