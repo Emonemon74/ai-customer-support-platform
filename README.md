@@ -22,6 +22,7 @@ harness with measured before/after numbers, and CI.
 - [Retrieval pipeline](#retrieval-pipeline)
 - [Grounded answers](#grounded-answers)
 - [Evaluation](#evaluation)
+- [Performance](#performance)
 - [Authentication & data isolation](#authentication--data-isolation)
 - [Security](#security)
 - [Observability](#observability)
@@ -188,6 +189,31 @@ unanswerable questions, **over-abstention 0.00**. The corpus is small so
 Recall@5 saturates — the differentiators are ranking quality (MRR) and the
 ability to decline. See [`backend/eval/README.md`](backend/eval/README.md).
 
+## Performance
+
+Measured with [`backend/eval/benchmark.py`](backend/eval/benchmark.py) on one
+Apple Silicon machine: synthetic text PDFs (~2.8k characters/page), embedded
+ChromaDB, a single process, LLM latency excluded. Full tables in
+[`backend/eval/benchmark_results.md`](backend/eval/benchmark_results.md).
+
+| Pages | Chunks | Ingest (parse + chunk + embed + index) | Retrieval p50 / p95 (hybrid + rerank) |
+|---|---|---|---|
+| 1 | 5 | 0.17 s | 146 / 154 ms |
+| 10 | 50 | 1.4 s | 370 / 435 ms |
+| 50 | 250 | 6.8 s | 370 / 435 ms |
+| 100 | 500 | 15.4 s | 409 / 518 ms |
+| 200 | 996 | 37.5 s | 490 / 765 ms |
+
+- Embedding is over 97% of ingestion time (parsing a 200-page PDF takes 0.3 s),
+  which is why ingestion runs in the background worker rather than the upload
+  request. Throughput falls from ~7.4 pages/s at 50 pages to ~5.3 at 200.
+- Reranking adds roughly 300–400 ms over hybrid retrieval; hybrid itself grows
+  from 74 to 123 ms p50 as the index reaches ~1,000 chunks because BM25 is
+  rebuilt per query.
+- A known passage hidden on page 101 of the 200-page PDF was returned at rank 1.
+- Caveats: synthetic documents, a single run, and 50 samples per retrieval
+  figure, so p95 values are approximate.
+
 ## Authentication & data isolation
 
 ```mermaid
@@ -311,14 +337,16 @@ npm run dev                    # http://localhost:5173
 
 ```bash
 cd backend
-uv run pytest                  # 49 tests: auth, isolation, chunking,
-                               # live-Chroma retrieval, answer grounding
+uv run pytest                  # 57 tests: auth, isolation, chunking,
+                               # live-Chroma retrieval, answer grounding,
+                               # persisted citations, stream cancellation
 uv run ruff check .
 ```
 
 ```bash
 cd frontend
 npm run lint
+npm test                      # 17 Vitest tests: SSE parser, citations, login
 npm run build
 ```
 
@@ -424,6 +452,6 @@ the cost, not warranted yet.
 - [x] Structured request logging with request/user/conversation ids and
       retrieval/LLM latency, plus a `/metrics` snapshot
 - [ ] Ship metrics/traces to a real backend (OpenTelemetry → Prometheus/Grafana)
-- [ ] Per-message citation history (sources currently reflect the latest answer)
+- [ ] Per-message citation chips in the UI (sources are persisted on every answer; the UI shows the latest answer's)
 - [ ] Larger evaluation corpus and an LLM-judge answer grader
 ```

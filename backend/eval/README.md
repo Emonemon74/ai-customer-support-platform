@@ -57,3 +57,16 @@ LLM: **source accuracy ~0.97** (the answer cited the expected document + page),
 ~0.03. Answer accuracy (~0.76) is a strict substring check against a short
 expected string, so it undercounts correct answers that paraphrase ("twenty
 nine" vs "29") — treat it as a floor.
+
+## Ingestion & retrieval benchmark
+
+`eval/benchmark.py` times ingestion (parse, chunk, embed + index) and retrieval
+latency per mode on synthetic PDFs of 1–200 pages, and hides a known passage in
+the largest one as a recall check. It excludes the LLM.
+
+```bash
+uv run python -m eval.benchmark [--pages 1 10 50 100 200] [--repeats 5]
+```
+
+Results are written to [`benchmark_results.md`](benchmark_results.md). Run only
+one instance at a time: runs share the vector store and sentinel ids.
