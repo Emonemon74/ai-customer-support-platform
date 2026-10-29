@@ -13,6 +13,7 @@ from app.core.authz import require_owned_conversation, require_owned_document
 from app.core.exceptions.document import (
     DuplicateDocumentError,
     FileTooLargeError,
+    NoReadableTextError,
     UnsupportedFileTypeError,
 )
 from app.core.exceptions.quota import QuotaExceededError
@@ -178,7 +179,11 @@ class DocumentService:
             )
             logger.info("queued document_id=%s for processing", document.id)
         else:
-            self.process_document(document.id)
+            try:
+                self.process_document(document.id)
+            except NoReadableTextError:
+                # Already recorded as FAILED with a reason the user can read.
+                pass
 
     def process_document(self, document_id: int) -> None:
         """Parse -> chunk -> embed -> index. Idempotent and retry-safe."""
@@ -211,6 +216,9 @@ class DocumentService:
                     pages = PDFParser.extract_pages(document.file_path)
                     chunks = TextChunker.chunk_pages(pages)
                     chunk_count = len(chunks)
+
+                    if not chunks:
+                        raise NoReadableTextError()
 
                     VectorStore().add_document(
                         document_id=document.id,

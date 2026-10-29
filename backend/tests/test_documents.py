@@ -97,3 +97,19 @@ def test_delete_document(client, user_a):
     assert client.get(
         f"/api/v1/documents?conversation_id={conversation_id}", headers=user_a
     ).json() == []
+
+
+def test_pdf_with_no_readable_text_fails_with_a_clear_reason(client, user_a, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.document_service.PDFParser.extract_pages",
+        staticmethod(lambda file_path: []),
+    )
+    conversation_id = make_conversation(client, user_a)
+
+    response = _upload(client, user_a, conversation_id)
+
+    assert response.status_code == 202
+    body = response.json()
+    assert body["status"] == "FAILED"
+    assert "No readable text" in body["failure_reason"]
+    assert "scanned" in body["failure_reason"]
