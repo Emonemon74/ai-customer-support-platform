@@ -16,6 +16,7 @@ router = APIRouter(
 )
 
 _chat_rate_limit = RateLimiter("chat", per_minute=settings.RATE_LIMIT_CHAT_PER_MINUTE)
+_chat_daily_limit = RateLimiter("chat-day", per_day=settings.RATE_LIMIT_CHAT_PER_DAY)
 
 
 @router.post("/ask", response_model=ChatResponse)
@@ -24,6 +25,7 @@ def ask(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _: None = Depends(_chat_rate_limit),
+    __: None = Depends(_chat_daily_limit),
 ):
     chat_service = ChatService(db)
 
@@ -45,6 +47,7 @@ def stream_chat(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _: None = Depends(_chat_rate_limit),
+    __: None = Depends(_chat_daily_limit),
 ) -> StreamingResponse:
     chat_service = ChatService(db)
 

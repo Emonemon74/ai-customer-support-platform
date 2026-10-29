@@ -48,6 +48,9 @@ class Settings(BaseSettings):
     RATE_LIMIT_CHAT_PER_MINUTE: int = 30
 
     RATE_LIMIT_DEMO_PER_MINUTE: int = 5
+    # Chat requests per client address per day, for every user. Guest caps alone
+    # don't help because anyone can register; 0 disables.
+    RATE_LIMIT_CHAT_PER_DAY: int = 100
 
     # --- Public demo & usage limits ---------------------------------------
     # Demo mode lets a visitor start a throw-away guest session pre-loaded with

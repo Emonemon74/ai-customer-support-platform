@@ -56,7 +56,12 @@ class DemoService:
 
     def create_session(self) -> tuple[str, int]:
         """Create a guest user with a sample conversation; return (token, id)."""
-        self.purge_expired()
+        # Housekeeping must never stop a visitor from getting a session.
+        try:
+            self.purge_expired()
+        except Exception:
+            self.db.rollback()
+            logger.exception("demo purge failed; continuing without cleanup")
 
         user = self.user_repository.create(
             full_name="Demo Visitor",

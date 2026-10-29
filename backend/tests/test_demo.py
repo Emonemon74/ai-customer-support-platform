@@ -159,3 +159,15 @@ def test_expired_demo_users_are_purged_with_their_data(client, db, demo_on):
     assert db.query(Document).filter(Document.uploaded_by == old_id).count() == 0
     # The fresh guest is untouched.
     assert db.query(User).filter(User.is_demo.is_(True)).count() == 1
+
+
+def test_demo_session_survives_a_failing_purge(client, demo_on, monkeypatch):
+    def boom(self, limit=10):
+        raise RuntimeError("cleanup broke")
+
+    monkeypatch.setattr(DemoService, "purge_expired", boom)
+
+    headers, conversation_id = _start_demo(client)
+
+    assert conversation_id
+    assert headers["Authorization"].startswith("Bearer ")

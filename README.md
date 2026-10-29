@@ -54,6 +54,8 @@ Because it is public and calls a paid LLM, the demo is capped:
 | Questions per guest session | 30 (`429`) | `DEMO_MAX_MESSAGES` |
 | Upload size for guests | 2 MB | `DEMO_MAX_FILE_MB` |
 | Demo sessions per IP | 5 / minute | `RATE_LIMIT_DEMO_PER_MINUTE` |
+| Chat requests per IP per day, all users | 100 (`429`) | `RATE_LIMIT_CHAT_PER_DAY` |
+| Question length | 2,000 characters (`422`) | |
 | Documents per user | 25 | `MAX_DOCUMENTS_PER_USER` |
 | Total questions per day, all users | `0` = off (`503` when hit) | `GLOBAL_DAILY_CHAT_LIMIT` |
 | Guest lifetime | 24 h, then the account, its conversations, documents and vectors are purged | `DEMO_USER_TTL_HOURS` |
@@ -283,7 +285,8 @@ that the victim's data is untouched.
   background jobs bind their own `req` + `job_id`. The chat path logs
   retrieval latency, LLM latency, prompt/completion tokens and whether the
   model abstained; ingestion logs chunk count and processing time.
-- **`GET /metrics`** — a plain-text snapshot (Prometheus format) of in-process
+- **`GET /metrics`** — (backend only; the bundled nginx doesn't proxy it, so it
+  isn't reachable from the internet) a plain-text snapshot (Prometheus format) of in-process
   counters: HTTP requests/errors by status, chat answers by outcome, LLM
   tokens, retrieval cache hit/miss, plus count/sum summaries for request,
   retrieval and LLM latency.
@@ -400,6 +403,7 @@ in-memory SQLite database.
 | `RATE_LIMIT_ENABLED` | no | `true` | per-IP fixed-window limiting |
 | `RATE_LIMIT_AUTH_PER_MINUTE` | no | `10` | auth endpoint budget |
 | `RATE_LIMIT_CHAT_PER_MINUTE` | no | `30` | chat endpoint budget |
+| `RATE_LIMIT_CHAT_PER_DAY` | no | `100` | chat requests per IP per day, all users (`0` disables) |
 | `DEMO_ENABLED` | no | `false` | enable the no-signup guest demo |
 | `DEMO_MAX_MESSAGES` | no | `30` | questions per guest |
 | `DEMO_USER_TTL_HOURS` | no | `24` | guest lifetime before purge |
