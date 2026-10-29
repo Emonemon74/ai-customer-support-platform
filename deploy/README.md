@@ -22,8 +22,8 @@ aws configure                            # IAM user with programmatic access
 ssh-keygen -t ed25519 -f ~/.ssh/aicsp -N ''
 ```
 
-The IAM user needs EC2, RDS, VPC and EIP permissions (`AdministratorAccess` is
-simplest for a personal project).
+The IAM user needs EC2, RDS, VPC, EIP, IAM (roles and an OIDC provider), S3 and
+SSM permissions (`AdministratorAccess` is simplest for a personal project).
 
 ## 1. Provision infrastructure
 

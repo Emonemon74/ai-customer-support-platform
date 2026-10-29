@@ -15,7 +15,7 @@ output "db_endpoint" {
 
 output "database_url" {
   description = "DATABASE_URL for the app .env"
-  value       = "postgresql+psycopg2://${var.db_username}:${var.db_password}@${aws_db_instance.postgres.endpoint}/ai_support"
+  value       = "postgresql+psycopg2://${urlencode(var.db_username)}:${urlencode(var.db_password)}@${aws_db_instance.postgres.endpoint}/ai_support"
   sensitive   = true
 }
 
