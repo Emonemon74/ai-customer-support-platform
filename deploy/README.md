@@ -71,25 +71,48 @@ Rsyncs the repo to the host, writes `.env`, and runs
 Visit `https://<SITE_ADDRESS>`. Redeploy after code changes with the same
 command.
 
-## Continuous deployment (optional)
+## Continuous deployment (no SSH)
 
 [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) redeploys the
 host whenever CI passes on `main` (or when run by hand from the Actions tab),
-then smoke-tests `https://<SITE_ADDRESS>/health`. Add these repository secrets
-first:
+then smoke-tests `https://<SITE_ADDRESS>/health`.
 
-| Secret | Value |
+How it works: the job assumes an AWS role through GitHub OIDC (no stored AWS
+keys), uploads a `git archive` tarball to a private S3 bucket, and sends the
+host a Systems Manager Run Command that downloads it, writes `.env` from SSM
+Parameter Store and runs `docker compose up -d --build`
+([`remote-deploy.sh`](remote-deploy.sh)). Port 22 is not involved, so
+`ssh_ingress_cidr` can stay locked to your own IP. The role is trusted only
+for this repository's `production` environment and can only upload releases and
+run one command document on this one instance.
+
+One-time setup after `terraform apply`:
+
+```bash
+# 1. Store the production .env where the host can read it (stays out of GitHub).
+aws ssm put-parameter --name /aicsp/prod/env --type SecureString \
+  --value file://deploy/.env.prod --overwrite
+
+# 2. Print the values the workflow needs.
+terraform -chdir=deploy/terraform output
+```
+
+3. In GitHub, create an environment named `production` (Settings →
+   Environments; add yourself as a required reviewer if you want a manual
+   gate), then add these **repository variables** (not secrets):
+
+| Variable | From `terraform output` |
 |---|---|
-| `DEPLOY_HOST` | `terraform output -raw app_ip` |
-| `DEPLOY_SSH_KEY` | contents of `~/.ssh/aicsp` (the private key) |
-| `PROD_ENV` | full contents of `deploy/.env.prod` |
-| `SITE_ADDRESS` | `terraform output -raw site_address` |
+| `AWS_REGION` | the `region` you applied with |
+| `AWS_DEPLOY_ROLE_ARN` | `github_deploy_role_arn` |
+| `DEPLOY_INSTANCE_ID` | `instance_id` |
+| `DEPLOY_BUCKET` | `releases_bucket` |
+| `SITE_ADDRESS` | `site_address` |
 
-The job uses a `production` environment, so you can require a manual approval
-under Settings → Environments. This workflow has not been run yet: it needs a
-provisioned host. The SSH rule in the security group only allows
-`ssh_ingress_cidr`, so GitHub-hosted runners can't reach port 22 unless you
-widen that CIDR or use a self-hosted runner.
+To change a setting (for example `GLOBAL_DAILY_CHAT_LIMIT`), re-run step 1 and
+re-run the workflow. If the account already has a GitHub OIDC provider, set
+`github_oidc_provider_arn` in `terraform.tfvars` instead of creating a second
+one. This workflow has not run yet: it needs a provisioned host.
 
 ## Operating
 

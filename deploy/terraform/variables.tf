@@ -34,3 +34,21 @@ variable "db_password" {
   type      = string
   sensitive = true
 }
+
+variable "github_repo" {
+  type        = string
+  description = "owner/name of the repository allowed to deploy through OIDC"
+  default     = "Emonemon74/ai-customer-support-platform"
+}
+
+variable "github_oidc_provider_arn" {
+  type        = string
+  description = "ARN of an existing GitHub OIDC provider; leave empty to create one"
+  default     = ""
+}
+
+variable "env_parameter_name" {
+  type        = string
+  description = "SSM SecureString holding the production .env contents"
+  default     = "/aicsp/prod/env"
+}

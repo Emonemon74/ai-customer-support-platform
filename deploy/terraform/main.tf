@@ -130,6 +130,7 @@ resource "aws_instance" "app" {
   ami                    = data.aws_ami.al2023.id
   instance_type          = var.instance_type
   key_name               = aws_key_pair.deployer.key_name
+  iam_instance_profile   = aws_iam_instance_profile.app_host.name
   vpc_security_group_ids = [aws_security_group.app.id]
   subnet_id              = data.aws_subnets.default.ids[0]
   user_data              = file("${path.module}/user-data.sh")
