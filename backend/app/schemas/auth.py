@@ -11,12 +11,22 @@ class UserResponse(BaseModel):
     full_name: str
     email: EmailStr
     is_active: bool
+    is_demo: bool = False
 
     class Config:
         from_attributes = True
 
 
-class AuthRequest(BaseModel):
-    full_name: str | None = None
+class DemoSessionResponse(TokenResponse):
+    conversation_id: int
+
+
+class RegisterRequest(BaseModel):
+    full_name: str = Field(min_length=1, max_length=255)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+
+class LoginRequest(BaseModel):
     email: str
     password: str

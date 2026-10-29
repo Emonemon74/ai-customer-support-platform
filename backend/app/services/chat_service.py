@@ -1,31 +1,57 @@
 import json
-from typing import Generator
+import logging
+from collections.abc import Generator
+from datetime import datetime
 
-from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.ai.llm import stream_answer
-from app.ai.rag import ask_question, build_context
+from app.ai.llm import FALLBACK_ANSWER, stream_answer
+from app.ai.rag import ask_question, build_context, reconcile_sources
+from app.core.authz import require_owned_conversation
+from app.core.exceptions.quota import CapacityError, QuotaExceededError
+from app.core.observability import Timer, metrics, set_context
+from app.core.settings import settings
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.message_repository import MessageRepository
 
+logger = logging.getLogger(__name__)
+
+GENERIC_STREAM_ERROR = "Something went wrong while generating the response."
+
 
 class ChatService:
     def __init__(self, db: Session):
+        self.db = db
         self.conversation_repository = ConversationRepository(db)
         self.message_repository = MessageRepository(db)
 
+    def enforce_quota(self, current_user: User) -> None:
+        """Raise before any work happens if a usage limit is hit."""
+        if (
+            settings.GLOBAL_DAILY_CHAT_LIMIT
+            and self.message_repository.count_questions_since(
+                datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            )
+            >= settings.GLOBAL_DAILY_CHAT_LIMIT
+        ):
+            raise CapacityError(
+                "The demo has reached its daily question budget. "
+                "Please try again tomorrow."
+            )
+
+        if (
+            current_user.is_demo
+            and self.message_repository.count_questions_by_user(current_user.id)
+            >= settings.DEMO_MAX_MESSAGES
+        ):
+            raise QuotaExceededError(
+                f"Demo limit reached ({settings.DEMO_MAX_MESSAGES} questions). "
+                "Create an account to keep going."
+            )
+
     def validate_conversation_access(self, conversation_id: int, current_user: User):
-        conversation = self.conversation_repository.get_by_id(conversation_id)
-
-        if not conversation:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Conversation not found")
-
-        if conversation.user_id != current_user.id:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You are not authorized")
-
-        return conversation
+        return require_owned_conversation(self.db, conversation_id, current_user.id)
 
     def build_conversation_history(self, conversation_id: int) -> str:
         history = self.message_repository.get_recent_messages(conversation_id)
@@ -35,21 +61,53 @@ class ChatService:
             for message in reversed(history)
         )
 
+    def _log_answer(self, conversation_id: int, stats: dict, answer: str) -> None:
+        abstained = answer.strip() == FALLBACK_ANSWER
+        outcome = "abstained" if abstained else "answered"
+
+        metrics.inc("chat_answers_total", outcome=outcome)
+        if "retrieval_ms" in stats:
+            metrics.observe("chat_retrieval_ms", stats["retrieval_ms"])
+        if "llm_ms" in stats:
+            metrics.observe("chat_llm_ms", stats["llm_ms"])
+        if stats.get("total_tokens"):
+            metrics.inc("chat_llm_tokens_total", stats["total_tokens"])
+
+        logger.info(
+            "chat %s conversation_id=%s retrieval_ms=%.1f llm_ms=%.1f "
+            "context_chunks=%s prompt_tokens=%s completion_tokens=%s answer_chars=%s",
+            outcome,
+            conversation_id,
+            stats.get("retrieval_ms", 0.0),
+            stats.get("llm_ms", 0.0),
+            stats.get("context_chunks", 0),
+            stats.get("prompt_tokens", "-"),
+            stats.get("completion_tokens", "-"),
+            len(answer),
+        )
+
     def ask(self, conversation_id: int, question: str, current_user: User):
         self.validate_conversation_access(conversation_id, current_user)
+        self.enforce_quota(current_user)
+        set_context(user_id=current_user.id, conversation_id=conversation_id)
 
         self.message_repository.create(conversation_id, "USER", question)
 
         conversation_history = self.build_conversation_history(conversation_id)
 
+        stats: dict = {}
         result = ask_question(
             question=question,
             user_id=current_user.id,
             conversation_id=conversation_id,
             conversation_history=conversation_history,
+            stats=stats,
         )
 
-        self.message_repository.create(conversation_id, "ASSISTANT", result["answer"])
+        self.message_repository.create(
+            conversation_id, "ASSISTANT", result["answer"], sources=result["sources"]
+        )
+        self._log_answer(conversation_id, stats, result["answer"])
 
         return result
 
@@ -58,20 +116,29 @@ class ChatService:
         conversation_id: int,
         question: str,
         current_user: User,
-    ) -> Generator[str, None, None]:
+    ) -> Generator[str]:
+        # Defense in depth: the endpoint already checks ownership, but the
+        # generator re-validates so it can never run unscoped.
+        self.validate_conversation_access(conversation_id, current_user)
+        set_context(user_id=current_user.id, conversation_id=conversation_id)
 
         self.message_repository.create(conversation_id, "USER", question)
 
         conversation_history = self.build_conversation_history(conversation_id)
 
         full_answer = ""
+        sources: list[dict] = []
+        stats: dict = {}
 
         try:
-            context, sources = build_context(
-                question=question,
-                user_id=current_user.id,
-                conversation_id=conversation_id,
-            )
+            with Timer() as retrieval:
+                context, sources = build_context(
+                    question=question,
+                    user_id=current_user.id,
+                    conversation_id=conversation_id,
+                )
+            stats["retrieval_ms"] = retrieval.ms
+            stats["context_chunks"] = len(sources)
 
             sources_payload = json.dumps({
                 "type": "sources",
@@ -80,32 +147,59 @@ class ChatService:
 
             yield f"data: {sources_payload}\n\n"
 
-            for token in stream_answer(
-                question=question,
-                context=context,
-                conversation_history=conversation_history,
-            ):
-                full_answer += token
+            with Timer() as llm:
+                for token in stream_answer(
+                    question=question,
+                    context=context,
+                    conversation_history=conversation_history,
+                    stats=stats,
+                ):
+                    full_answer += token
 
-                token_payload = json.dumps({
-                    "type": "token",
-                    "content": token,
-                })
+                    token_payload = json.dumps({
+                        "type": "token",
+                        "content": token,
+                    })
 
-                yield f"data: {token_payload}\n\n"
+                    yield f"data: {token_payload}\n\n"
+            stats["llm_ms"] = llm.ms
+
+            # The first sources event was the retrieved set; now that we have
+            # the full answer, replace it with the ones actually cited.
+            final_sources = reconcile_sources(full_answer, sources)
 
             self.message_repository.create(
                 conversation_id=conversation_id,
                 role="ASSISTANT",
                 content=full_answer,
+                sources=final_sources,
             )
+            yield f"data: {json.dumps({'type': 'sources', 'sources': final_sources})}\n\n"
 
             yield f"data: {json.dumps({'type': 'done'})}\n\n"
 
-        except Exception as error:
+            self._log_answer(conversation_id, stats, full_answer)
+
+        except GeneratorExit:
+            # The client went away (e.g. pressed "Stop"). Keep what was
+            # generated so the partial answer is still there on reload.
+            metrics.inc("chat_answers_total", outcome="cancelled")
+            if full_answer.strip():
+                self.message_repository.create(
+                    conversation_id=conversation_id,
+                    role="ASSISTANT",
+                    content=full_answer,
+                    sources=reconcile_sources(full_answer, sources),
+                )
+            raise
+
+        except Exception:
+            metrics.inc("chat_answers_total", outcome="error")
+            logger.exception("Streaming chat failed for conversation %s", conversation_id)
+
             error_payload = json.dumps({
                 "type": "error",
-                "message": str(error),
+                "message": GENERIC_STREAM_ERROR,
             })
 
             yield f"data: {error_payload}\n\n"

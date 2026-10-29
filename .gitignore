@@ -179,6 +179,7 @@ poetry.toml
 pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
+.env
 backend/.env
 backend/uploads/
 backend/chroma_db/
@@ -186,3 +187,10 @@ backend/*.db
 backend/*.db-*
 __pycache__/
 *.pyc
+
+# Deploy secrets / state
+deploy/.env.prod
+deploy/terraform/.terraform/
+deploy/terraform/*.tfstate
+deploy/terraform/*.tfstate.*
+deploy/terraform/terraform.tfvars

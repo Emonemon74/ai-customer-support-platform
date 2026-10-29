@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { DocumentList } from "../document/DocumentList";
 import { DocumentUpload } from "../document/DocumentUpload";
 import { Pencil, Plus, Trash2, X } from "lucide-react";
 
@@ -17,6 +18,7 @@ type SidebarProps = {
   onNewChat: () => void;
   onCreateConversation: (filename: string) => Promise<number>;
   onSelectConversation: (conversation: Conversation) => void;
+  onConversationDeleted?: (conversationId: number) => void;
   onClose?: () => void;
 };
 
@@ -26,11 +28,13 @@ export function Sidebar({
   onNewChat,
   onCreateConversation,
   onSelectConversation,
+  onConversationDeleted,
   onClose,
 }: SidebarProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [documentRefreshKey, setDocumentRefreshKey] = useState(0);
 
   async function loadConversations() {
     try {
@@ -89,6 +93,8 @@ export function Sidebar({
       setConversations((current) =>
         current.filter((item) => item.id !== conversation.id)
       );
+
+      onConversationDeleted?.(conversation.id);
     } catch (error) {
       console.error(error);
     }
@@ -139,6 +145,12 @@ export function Sidebar({
       <DocumentUpload
         conversationId={selectedConversationId}
         onCreateConversation={onCreateConversation}
+        onUploaded={() => setDocumentRefreshKey((current) => current + 1)}
+      />
+
+      <DocumentList
+        conversationId={selectedConversationId}
+        refreshKey={documentRefreshKey}
       />
 
       <input

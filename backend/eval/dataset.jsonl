@@ -1,0 +1,44 @@
+{"question": "How many days do I have to request a full refund?", "expected_doc": "billing_policy.txt", "expected_page": 2, "type": "lookup", "answer_substring": "30 days"}
+{"question": "What is the price of the Team plan per user?", "expected_doc": "billing_policy.txt", "expected_page": 1, "type": "lookup", "answer_substring": "29"}
+{"question": "What discount do I get for paying annually?", "expected_doc": "billing_policy.txt", "expected_page": 1, "type": "lookup", "answer_substring": "20 percent"}
+{"question": "What happens after three failed payment attempts?", "expected_doc": "billing_policy.txt", "expected_page": 3, "type": "lookup", "answer_substring": "read-only"}
+{"question": "How long is data kept after my account is downgraded for non-payment?", "expected_doc": "billing_policy.txt", "expected_page": 3, "type": "lookup", "answer_substring": "60 days"}
+{"question": "Do you refund unused time on a monthly plan?", "expected_doc": "billing_policy.txt", "expected_page": 2, "type": "distractor", "answer_substring": "partial refunds"}
+{"question": "How do I get an invoice without VAT added?", "expected_doc": "billing_policy.txt", "expected_page": 4, "type": "multi_chunk", "answer_substring": "VAT identification number"}
+{"question": "When do API access tokens expire?", "expected_doc": "security_guide.txt", "expected_page": 1, "type": "lookup", "answer_substring": "24 hours"}
+{"question": "Is SMS two-factor authentication supported?", "expected_doc": "security_guide.txt", "expected_page": 2, "type": "lookup", "answer_substring": "not supported"}
+{"question": "What forms of 2FA does Acme Cloud support?", "expected_doc": "security_guide.txt", "expected_page": 2, "type": "multi_chunk", "answer_substring": "authenticator"}
+{"question": "How are uploaded documents kept separate between customers?", "expected_doc": "security_guide.txt", "expected_page": 3, "type": "lookup", "answer_substring": "workspace"}
+{"question": "What encryption is used for data at rest?", "expected_doc": "security_guide.txt", "expected_page": 3, "type": "lookup", "answer_substring": "AES-256"}
+{"question": "How long are audit logs kept on the Enterprise plan?", "expected_doc": "security_guide.txt", "expected_page": 4, "type": "distractor", "answer_substring": "1 year"}
+{"question": "What happens if a user does not enroll in required 2FA in time?", "expected_doc": "security_guide.txt", "expected_page": 2, "type": "lookup", "answer_substring": "lose access"}
+{"question": "How long before a team invite expires?", "expected_doc": "onboarding_manual.txt", "expected_page": 1, "type": "lookup", "answer_substring": "14 days"}
+{"question": "Which role is allowed to change the billing contact?", "expected_doc": "onboarding_manual.txt", "expected_page": 1, "type": "multi_chunk", "answer_substring": "Owner"}
+{"question": "What is the maximum size of a single imported file?", "expected_doc": "onboarding_manual.txt", "expected_page": 2, "type": "lookup", "answer_substring": "20 MB"}
+{"question": "How many documents per conversation do you recommend?", "expected_doc": "onboarding_manual.txt", "expected_page": 3, "type": "lookup", "answer_substring": "50"}
+{"question": "What keyboard shortcut creates a new conversation?", "expected_doc": "onboarding_manual.txt", "expected_page": 4, "type": "lookup", "answer_substring": "C"}
+{"question": "Can I import documents from Google Drive?", "expected_doc": "onboarding_manual.txt", "expected_page": 2, "type": "lookup", "answer_substring": "Google Drive"}
+{"question": "What is the API base URL?", "expected_doc": "api_reference.txt", "expected_page": 1, "type": "lookup", "answer_substring": "api.acme.cloud"}
+{"question": "What HTTP status is returned when the rate limit is exceeded?", "expected_doc": "api_reference.txt", "expected_page": 1, "type": "distractor", "answer_substring": "429"}
+{"question": "How do I page through the list of conversations in the API?", "expected_doc": "api_reference.txt", "expected_page": 2, "type": "lookup", "answer_substring": "cursor"}
+{"question": "What status code does the upload endpoint return while processing?", "expected_doc": "api_reference.txt", "expected_page": 3, "type": "lookup", "answer_substring": "202"}
+{"question": "How do I retry a document that failed to process?", "expected_doc": "api_reference.txt", "expected_page": 3, "type": "multi_chunk", "answer_substring": "retry"}
+{"question": "What events does the chat stream emit?", "expected_doc": "api_reference.txt", "expected_page": 4, "type": "lookup", "answer_substring": "token"}
+{"question": "Which channel does the Slack integration post to?", "expected_doc": "integrations_guide.txt", "expected_page": 1, "type": "lookup", "answer_substring": "channel"}
+{"question": "How are outgoing webhook deliveries signed?", "expected_doc": "integrations_guide.txt", "expected_page": 2, "type": "lookup", "answer_substring": "HMAC"}
+{"question": "How long are failed webhook deliveries retried?", "expected_doc": "integrations_guide.txt", "expected_page": 2, "type": "lookup", "answer_substring": "24 hours"}
+{"question": "Which identity providers support SCIM provisioning?", "expected_doc": "integrations_guide.txt", "expected_page": 4, "type": "distractor", "answer_substring": "Okta"}
+{"question": "What triggers does the Zapier app provide?", "expected_doc": "integrations_guide.txt", "expected_page": 3, "type": "lookup", "answer_substring": "New Conversation"}
+{"question": "Why is my document stuck in processing?", "expected_doc": "troubleshooting.txt", "expected_page": 1, "type": "lookup", "answer_substring": "timed out"}
+{"question": "Why does the assistant say it cannot find an answer?", "expected_doc": "troubleshooting.txt", "expected_page": 2, "type": "multi_chunk", "answer_substring": "similar enough"}
+{"question": "Why are my answer citations off by one page?", "expected_doc": "troubleshooting.txt", "expected_page": 3, "type": "lookup", "answer_substring": "cover sheet"}
+{"question": "My SSO login keeps looping back to the login screen, what causes that?", "expected_doc": "troubleshooting.txt", "expected_page": 4, "type": "lookup", "answer_substring": "clock skew"}
+{"question": "How long until a locked account unlocks itself?", "expected_doc": "troubleshooting.txt", "expected_page": 4, "type": "lookup", "answer_substring": "30 minutes"}
+{"question": "What is the API rate limit per token?", "expected_doc": "api_reference.txt", "expected_page": 1, "type": "distractor", "answer_substring": "100 requests per minute"}
+{"question": "What is Acme Cloud's phone support number?", "expected_doc": null, "expected_page": null, "type": "unanswerable"}
+{"question": "Does Acme Cloud offer a free trial for the Enterprise plan?", "expected_doc": null, "expected_page": null, "type": "unanswerable"}
+{"question": "What is the CEO of Acme Cloud's name?", "expected_doc": null, "expected_page": null, "type": "unanswerable"}
+{"question": "Does Acme Cloud have a mobile app for iOS?", "expected_doc": null, "expected_page": null, "type": "unanswerable"}
+{"question": "What is the uptime service level agreement percentage?", "expected_doc": null, "expected_page": null, "type": "unanswerable"}
+{"question": "Can I pay by cryptocurrency?", "expected_doc": null, "expected_page": null, "type": "unanswerable"}
+{"question": "How do I export all my data before leaving Acme Cloud?", "expected_doc": null, "expected_page": null, "type": "unanswerable"}

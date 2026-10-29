@@ -1,0 +1,41 @@
+Acme Cloud — Security & Access Guide
+
+---PAGE---
+1. Authentication
+
+Acme Cloud supports email and password login, Google SSO, and SAML single
+sign-on for Enterprise accounts. Passwords must be at least 10 characters and
+are checked against a list of known breached passwords at signup.
+
+Access tokens issued to the API expire after 24 hours. Refresh tokens expire
+after 30 days of inactivity.
+
+---PAGE---
+2. Two-factor authentication
+
+Two-factor authentication (2FA) can be enabled per user in Settings > Security.
+Acme Cloud supports time-based one-time passwords (TOTP) via authenticator apps
+and hardware security keys using WebAuthn. SMS-based 2FA is not supported
+because of SIM-swap risk.
+
+Enterprise administrators can require 2FA for all members of the organization.
+Users who have not enrolled within 7 days of the requirement being enabled lose
+access until they enroll.
+
+---PAGE---
+3. Data isolation
+
+Every document uploaded to Acme Cloud is scoped to the workspace and the
+conversation it was uploaded into. Retrieval queries are filtered by workspace
+and conversation identifiers so that one customer's content can never be
+returned to another customer.
+
+Data is encrypted at rest using AES-256 and in transit using TLS 1.2 or higher.
+
+---PAGE---
+4. Audit logs
+
+Audit logs record sign-ins, permission changes, document uploads, and document
+deletions. Logs are retained for 90 days on the Team plan and 1 year on the
+Enterprise plan. Logs can be exported as CSV or streamed to an external SIEM
+using the audit log webhook.

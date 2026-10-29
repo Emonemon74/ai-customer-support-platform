@@ -4,14 +4,66 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     APP_NAME: str = "AI Customer Support Platform"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = True
+    DEBUG: bool = False
 
     GROQ_API_KEY: str
+    GROQ_MODEL: str = "openai/gpt-oss-120b"
     DATABASE_URL: str
 
     SECRET_KEY: str
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 3000000
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day; override via env
+
+    # --- Retrieval ---------------------------------------------------------
+    # "vector"  -> dense only (original behaviour, kept for the eval baseline)
+    # "hybrid"  -> dense + BM25 fused
+    # "rerank"  -> hybrid candidates re-scored by a cross-encoder (default)
+    RETRIEVAL_MODE: str = "rerank"
+    RETRIEVAL_DENSE_K: int = 20
+    RETRIEVAL_BM25_K: int = 20
+    RETRIEVAL_RRF_K: int = 60
+    RETRIEVAL_TOP_N: int = 5
+    RERANKER_MODEL: str = "ms-marco-MiniLM-L-12-v2"
+    # Minimum reranker score for a chunk to be treated as relevant context.
+    # Below this the answer path is given empty context and must abstain.
+    RETRIEVAL_MIN_SCORE: float = 0.15
+
+    # --- Async document ingestion ---------------------------------------
+    # When DOCUMENT_QUEUE_ASYNC is false the upload endpoint processes the
+    # document inline (used by tests, CI and simple local runs). In the
+    # Docker stack it is true and an RQ worker drains the queue.
+    REDIS_URL: str = "redis://localhost:6379/0"
+    # Empty -> embedded PersistentClient (local dev, tests, eval). Set to a
+    # host -> shared Chroma server (required once the worker is a separate
+    # process).
+    CHROMA_HOST: str = ""
+    CHROMA_PORT: int = 8000
+    DOCUMENT_QUEUE_ASYNC: bool = False
+    DOCUMENT_QUEUE_NAME: str = "documents"
+    DOCUMENT_MAX_RETRIES: int = 3
+
+    # --- Rate limiting ---------------------------------------------------
+    RATE_LIMIT_ENABLED: bool = True
+    RATE_LIMIT_AUTH_PER_MINUTE: int = 10
+    RATE_LIMIT_CHAT_PER_MINUTE: int = 30
+
+    RATE_LIMIT_DEMO_PER_MINUTE: int = 5
+    # Chat requests per client address per day, for every user. Guest caps alone
+    # don't help because anyone can register; 0 disables.
+    RATE_LIMIT_CHAT_PER_DAY: int = 100
+
+    # --- Public demo & usage limits ---------------------------------------
+    # Demo mode lets a visitor start a throw-away guest session pre-loaded with
+    # sample documents. Guests are purged after DEMO_USER_TTL_HOURS.
+    DEMO_ENABLED: bool = False
+    DEMO_USER_TTL_HOURS: int = 24
+    DEMO_MAX_MESSAGES: int = 30  # chat questions per guest session
+    DEMO_MAX_FILE_MB: int = 2
+    # Applies to everyone.
+    MAX_DOCUMENTS_PER_USER: int = 25
+    # Hard ceiling on chat questions per UTC day across all users, protecting
+    # the LLM key from a flood. 0 disables the ceiling.
+    GLOBAL_DAILY_CHAT_LIMIT: int = 0
 
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     BACKEND_CORS_ORIGIN_REGEX: str = ""

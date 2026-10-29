@@ -1,31 +1,30 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import { Bot, Check, Copy, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import { ChatInput } from "./ChatInput";
 import { SourceCitations } from "./SourceCitations";
 
-import type { Source } from "../../services/chat.service";
 import type { Message } from "../../services/message.service";
+
+const HighlightedCode = lazy(() => import("./HighlightedCode"));
 
 type ChatWindowProps = {
   title?: string;
   messages: Message[];
   disabled?: boolean;
   onSend: (question: string) => Promise<void>;
-  sources: Source[];
+  onStop?: () => void;
 };
 
 const suggestedPrompts = [
-  "Summarize my uploaded document",
-  "What are the key skills mentioned?",
-  "Generate interview questions from this document",
+  "Summarize this document",
+  "What are the key points?",
+  "What does this document say about refunds or cancellations?",
   "Explain this document in simple words",
 ];
 
@@ -34,7 +33,7 @@ export function ChatWindow({
   messages,
   disabled,
   onSend,
-  sources,
+  onStop,
 }: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -81,7 +80,7 @@ export function ChatWindow({
         </h2>
       </div>
 
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-6">
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-3 py-6 sm:px-6">
         {messages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-center">
             <div className="w-full max-w-3xl rounded-2xl bg-white px-8 py-8 shadow-sm">
@@ -204,19 +203,18 @@ export function ChatWindow({
                                   </button>
                                 </div>
 
-                                <SyntaxHighlighter
-                                  style={oneDark}
-                                  language={match[1]}
-                                  PreTag="div"
-                                  customStyle={{
-                                    margin: 0,
-                                    borderRadius: 0,
-                                    background: "transparent",
-                                    padding: "16px",
-                                  }}
+                                <Suspense
+                                  fallback={
+                                    <pre className="m-0 overflow-x-auto p-4 text-sm text-slate-200">
+                                      {codeText}
+                                    </pre>
+                                  }
                                 >
-                                  {codeText}
-                                </SyntaxHighlighter>
+                                  <HighlightedCode
+                                    code={codeText}
+                                    language={match[1]}
+                                  />
+                                </Suspense>
                               </div>
                             );
                           }
@@ -228,6 +226,8 @@ export function ChatWindow({
                       {message.content}
                     </ReactMarkdown>
                   </div>
+
+                  {!isUser && <SourceCitations sources={message.sources ?? []} />}
                 </div>
 
                 {!isUser && (
@@ -257,7 +257,7 @@ export function ChatWindow({
           })
         )}
 
-        {disabled && messages.length > 0 && (
+        {disabled && messages.at(-1)?.content === "" && (
           <div className="flex items-start gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white shadow-sm">
               <Bot size={20} />
@@ -272,9 +272,7 @@ export function ChatWindow({
         <div ref={bottomRef} />
       </div>
 
-      <SourceCitations sources={sources} />
-
-      <ChatInput disabled={disabled} onSend={onSend} />
+      <ChatInput disabled={disabled} onSend={onSend} onStop={onStop} />
     </main>
   );
 }

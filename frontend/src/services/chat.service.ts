@@ -1,9 +1,11 @@
 import { API_BASE_URL, api } from "../api/client";
 
 export type Source = {
-  document_id: number;
-  chunk_index: number;
+  document_id: number | null;
+  conversation_id?: number | null;
+  chunk_index?: number | null;
   filename?: string | null;
+  page_number?: number | null;
 };
 
 export type ChatResponse = {
@@ -41,7 +43,8 @@ export async function streamQuestion(
   conversationId: number,
   question: string,
   onToken: (token: string) => void,
-  onSources?: (sources: Source[]) => void
+  onSources?: (sources: Source[]) => void,
+  signal?: AbortSignal
 ) {
   const token = localStorage.getItem("access_token");
 
@@ -55,6 +58,7 @@ export async function streamQuestion(
       conversation_id: conversationId,
       question,
     }),
+    signal,
   });
 
   if (!response.ok) {

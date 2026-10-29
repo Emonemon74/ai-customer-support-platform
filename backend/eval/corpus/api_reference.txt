@@ -1,0 +1,43 @@
+Acme Cloud — API Reference
+
+---PAGE---
+1. Authentication and base URL
+
+All API requests go to https://api.acme.cloud/v1. Authenticate with a bearer
+token in the Authorization header. Tokens are created in Settings > Developers
+and are scoped to a single workspace. A request with a missing or expired token
+returns HTTP 401.
+
+The API is rate limited to 100 requests per minute per token. Exceeding the
+limit returns HTTP 429 with a Retry-After header in seconds.
+
+---PAGE---
+2. Conversations endpoint
+
+POST /conversations creates a conversation and returns its id. GET
+/conversations lists conversations, 50 per page, newest first, using a cursor
+in the page parameter. DELETE /conversations/{id} permanently removes the
+conversation and every document and message in it.
+
+---PAGE---
+3. Documents endpoint
+
+POST /documents/upload accepts a multipart form with a file field and a
+conversation_id field. The response is HTTP 202 with a document id while
+processing continues in the background. Poll GET /documents/{id} until status
+is READY or FAILED. A failed document exposes a failure_reason field and can be
+retried with POST /documents/{id}/retry.
+
+Only PDF files are processed for question answering. Other accepted types are
+stored but not indexed.
+
+---PAGE---
+4. Chat endpoint
+
+POST /chat/stream takes a conversation_id and a question and returns a
+server-sent event stream. The first event has type "sources" listing the
+document, page, and chunk for each cited passage. Subsequent events have type
+"token" with incremental answer text, and a final event has type "done".
+
+If no document passage clears the relevance threshold the answer is the fixed
+string indicating the information was not found in the uploaded documents.

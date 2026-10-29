@@ -66,7 +66,7 @@ class ConversationRepository:
         self.db.refresh(conversation)
 
         return conversation
-    
+
 
 
     def search_by_title(

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 
+from app.core.authz import require_owned_conversation
 from app.db.deps import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -45,6 +46,15 @@ def search_conversations(
         query=q,
         current_user=current_user,
     )
+
+
+@router.get("/{conversation_id}", response_model=ConversationResponse)
+def get_conversation(
+    conversation_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return require_owned_conversation(db, conversation_id, current_user.id)
 
 
 @router.get("/{conversation_id}/messages", response_model=list[MessageResponse])

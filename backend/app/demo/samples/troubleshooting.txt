@@ -1,0 +1,32 @@
+Acme Cloud — Troubleshooting
+
+---PAGE---
+1. A document is stuck in PROCESSING
+
+Processing normally completes within two minutes. If a document has been in
+PROCESSING for more than fifteen minutes it is automatically marked FAILED with
+the reason "processing timed out". Retry it from the document menu. Very large
+scanned PDFs are the most common cause because text extraction is slow.
+
+---PAGE---
+2. The assistant says it cannot find an answer
+
+This happens when no passage in the conversation's documents is similar enough
+to the question. Check that the relevant document finished processing and is in
+the same conversation. Rephrasing the question using words that appear in the
+document usually helps.
+
+---PAGE---
+3. Answers cite the wrong page
+
+Page numbers come from the PDF's own page structure. If a PDF has a cover sheet
+that is not counted as page one in the original, citations can be off by one.
+Re-uploading a version without the cover sheet fixes the numbering.
+
+---PAGE---
+4. Login problems
+
+If SSO login loops back to the login screen, the most common cause is a clock
+skew of more than five minutes between the identity provider and the browser.
+Clearing cookies for acme.cloud and retrying resolves most remaining cases.
+Locked accounts unlock automatically after 30 minutes.

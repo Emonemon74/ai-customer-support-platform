@@ -1,19 +1,24 @@
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
-from app.core.exceptions.document import FileTooLargeError, UnsupportedFileTypeError
 
 from app.core.exceptions.auth import (
     AuthenticationError,
     EmailAlreadyExistsError,
     UserNotFoundError,
 )
-
 from app.core.exceptions.conversation import (
     ConversationAccessDeniedError,
     ConversationDeleteDeniedError,
     ConversationNotFoundError,
     ConversationRenameDeniedError,
 )
+from app.core.exceptions.document import (
+    DuplicateDocumentError,
+    FileTooLargeError,
+    UnsupportedFileTypeError,
+)
+from app.core.exceptions.quota import CapacityError, QuotaExceededError
+
 
 def register_exception_handlers(app: FastAPI) -> None:
 
@@ -23,7 +28,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         exc: EmailAlreadyExistsError,
     ):
         return JSONResponse(
-            status_code=status.HTTP_400_BAD_REQUEST,
+            status_code=status.HTTP_409_CONFLICT,
             content={
                 "success": False,
                 "message": exc.message,
@@ -61,7 +66,7 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "error_code": "AUTH_003",
             },
         )
-    
+
     @app.exception_handler(UnsupportedFileTypeError)
     async def unsupported_file_type_handler(
         request: Request,
@@ -91,8 +96,22 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "error_code": "DOC_002",
             },
         )
-    
 
+
+    @app.exception_handler(DuplicateDocumentError)
+    async def duplicate_document_handler(
+        request: Request,
+        exc: DuplicateDocumentError,
+    ):
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content={
+                "success": False,
+                "message": exc.message,
+                "data": None,
+                "error_code": "DOC_003",
+            },
+        )
 
     @app.exception_handler(ConversationNotFoundError)
     async def conversation_not_found_handler(
@@ -154,5 +173,29 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "message": exc.message,
                 "data": None,
                 "error_code": "CONV_004",
+            },
+        )
+
+    @app.exception_handler(QuotaExceededError)
+    async def quota_exceeded_handler(request: Request, exc: QuotaExceededError):
+        return JSONResponse(
+            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+            content={
+                "success": False,
+                "message": exc.message,
+                "data": None,
+                "error_code": "QUOTA_001",
+            },
+        )
+
+    @app.exception_handler(CapacityError)
+    async def capacity_handler(request: Request, exc: CapacityError):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "success": False,
+                "message": exc.message,
+                "data": None,
+                "error_code": "QUOTA_002",
             },
         )

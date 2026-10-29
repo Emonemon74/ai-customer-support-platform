@@ -3,7 +3,6 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.settings import settings
 
-
 connect_args = {}
 
 if settings.DATABASE_URL.startswith("sqlite"):

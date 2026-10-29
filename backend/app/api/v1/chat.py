@@ -2,6 +2,8 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
+from app.core.ratelimit import RateLimiter
+from app.core.settings import settings
 from app.db.deps import get_db
 from app.dependencies.auth import get_current_user
 from app.models.user import User
@@ -13,12 +15,17 @@ router = APIRouter(
     tags=["Chat"],
 )
 
+_chat_rate_limit = RateLimiter("chat", per_minute=settings.RATE_LIMIT_CHAT_PER_MINUTE)
+_chat_daily_limit = RateLimiter("chat-day", per_day=settings.RATE_LIMIT_CHAT_PER_DAY)
+
 
 @router.post("/ask", response_model=ChatResponse)
 def ask(
     request: ChatRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _: None = Depends(_chat_rate_limit),
+    __: None = Depends(_chat_daily_limit),
 ):
     chat_service = ChatService(db)
 
@@ -39,6 +46,8 @@ def stream_chat(
     request: ChatRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _: None = Depends(_chat_rate_limit),
+    __: None = Depends(_chat_daily_limit),
 ) -> StreamingResponse:
     chat_service = ChatService(db)
 
@@ -46,6 +55,10 @@ def stream_chat(
         conversation_id=request.conversation_id,
         current_user=current_user,
     )
+
+    # Raised here (not inside the generator) so it becomes a real 429/503
+    # response instead of a half-open event stream.
+    chat_service.enforce_quota(current_user)
 
     stream = chat_service.stream(
         conversation_id=request.conversation_id,

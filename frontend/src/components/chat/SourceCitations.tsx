@@ -6,6 +6,11 @@ type Props = {
   sources: Source[];
 };
 
+function label(source: Source) {
+  const name = source.filename || `Document ${source.document_id}`;
+  return source.page_number != null ? `${name} · p.${source.page_number}` : name;
+}
+
 export function SourceCitations({ sources }: Props) {
   const uniqueSources = sources.filter(
     (source, index, array) =>
@@ -13,7 +18,7 @@ export function SourceCitations({ sources }: Props) {
       array.findIndex(
         (item) =>
           item.document_id === source.document_id &&
-          item.chunk_index === source.chunk_index &&
+          item.page_number === source.page_number &&
           item.filename === source.filename
       )
   );
@@ -21,19 +26,20 @@ export function SourceCitations({ sources }: Props) {
   if (uniqueSources.length === 0) return null;
 
   return (
-    <div className="border-t border-slate-200 bg-white p-4">
-      <p className="text-sm font-semibold text-slate-700">Sources</p>
+    <div className="mt-4 border-t border-slate-100 pt-3">
+      <p className="text-xs font-semibold text-slate-600">
+        Sources <span className="font-normal text-slate-400">· grounded in your documents</span>
+      </p>
 
       <div className="mt-2 flex flex-wrap gap-2">
         {uniqueSources.map((source, index) => (
           <span
-            key={`${source.document_id}-${source.chunk_index}-${index}`}
+            key={`${source.document_id}-${source.page_number}-${index}`}
             className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-700"
-            title={`Document ID: ${source.document_id}`}
+            title={label(source)}
           >
             <FileText size={14} />
-            {source.filename || `Document ${source.document_id}`} · Chunk{" "}
-            {source.chunk_index}
+            {label(source)}
           </span>
         ))}
       </div>

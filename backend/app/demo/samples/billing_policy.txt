@@ -1,0 +1,44 @@
+Acme Cloud — Billing & Refund Policy
+
+---PAGE---
+1. Subscription plans
+
+Acme Cloud offers three plans: Starter, Team, and Enterprise. The Starter plan
+is billed at 12 USD per user per month. The Team plan is billed at 29 USD per
+user per month and includes priority email support. Enterprise pricing is
+custom and negotiated with the sales team.
+
+All plans are billed monthly in advance. Annual billing is available and
+provides a 20 percent discount compared to monthly billing.
+
+---PAGE---
+2. Refunds
+
+Customers may request a full refund within 30 days of their first payment.
+Refund requests made after 30 days are not eligible for a refund, but the
+subscription can still be cancelled to stop future charges.
+
+Refunds are processed to the original payment method within 5 to 10 business
+days. Acme Cloud does not offer partial refunds for unused time on monthly
+plans.
+
+For annual plans cancelled after the 30 day window, a prorated credit is
+applied to the account but no cash refund is issued.
+
+---PAGE---
+3. Failed payments and dunning
+
+If a scheduled payment fails, Acme Cloud retries the charge after 3 days, then
+again after 7 days. If all three attempts fail, the account is downgraded to
+read-only mode. Data is retained for 60 days after downgrade before deletion.
+
+To restore full access, update the payment method in Settings > Billing and the
+outstanding invoice will be charged immediately.
+
+---PAGE---
+4. Taxes and invoices
+
+Invoices are available in Settings > Billing > Invoice history. VAT is added
+for customers in the European Union unless a valid VAT identification number is
+on file. Invoices cannot be edited after they are issued; a corrective credit
+note is issued instead.

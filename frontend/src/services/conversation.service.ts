@@ -13,6 +13,15 @@ export async function getConversations() {
 }
 
 
+export async function getConversation(conversationId: number) {
+  const response = await api.get<Conversation>(
+    `/api/v1/conversations/${conversationId}`
+  );
+
+  return response.data;
+}
+
+
 export async function createConversation(question: string) {
   const response = await api.post<Conversation>("/api/v1/conversations", {
     question,
@@ -24,7 +33,7 @@ export async function createConversation(question: string) {
 
 export async function searchConversations(query: string) {
   const response = await api.get<Conversation[]>(
-    `/api/v1/conversations/search?q=${query}`
+    `/api/v1/conversations/search?q=${encodeURIComponent(query)}`
   );
 
   return response.data;

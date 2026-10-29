@@ -1,12 +1,7 @@
 from sqlalchemy.orm import Session
 
 from app.ai.llm import generate_conversation_title
-from app.core.exceptions.conversation import (
-    ConversationAccessDeniedError,
-    ConversationDeleteDeniedError,
-    ConversationNotFoundError,
-    ConversationRenameDeniedError,
-)
+from app.core.authz import require_owned_conversation
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
 from app.repositories.document_repository import DocumentRepository
@@ -22,6 +17,7 @@ class ConversationService:
         self.document_repository = DocumentRepository(db)
         self.document_service = DocumentService(db)
         self.message_repository = MessageRepository(db)
+        self.db = db
 
     def create_conversation(
         self,
@@ -43,13 +39,7 @@ class ConversationService:
         conversation_id: int,
         current_user: User,
     ):
-        conversation = self.conversation_repository.get_by_id(conversation_id)
-
-        if not conversation:
-            raise ConversationNotFoundError()
-
-        if conversation.user_id != current_user.id:
-            raise ConversationAccessDeniedError()
+        require_owned_conversation(self.db, conversation_id, current_user.id)
 
         return self.message_repository.get_by_conversation(conversation_id)
 
@@ -59,13 +49,9 @@ class ConversationService:
         title: str,
         current_user: User,
     ):
-        conversation = self.conversation_repository.get_by_id(conversation_id)
-
-        if not conversation:
-            raise ConversationNotFoundError()
-
-        if conversation.user_id != current_user.id:
-            raise ConversationRenameDeniedError()
+        conversation = require_owned_conversation(
+            self.db, conversation_id, current_user.id
+        )
 
         return self.conversation_repository.update_title(
             conversation=conversation,
@@ -77,13 +63,9 @@ class ConversationService:
         conversation_id: int,
         current_user: User,
     ):
-        conversation = self.conversation_repository.get_by_id(conversation_id)
-
-        if not conversation:
-            raise ConversationNotFoundError()
-
-        if conversation.user_id != current_user.id:
-            raise ConversationDeleteDeniedError()
+        conversation = require_owned_conversation(
+            self.db, conversation_id, current_user.id
+        )
 
         documents = self.document_repository.get_all_by_conversation(conversation_id)
 

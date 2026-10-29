@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import toast from "react-hot-toast";
 
 import { Menu } from "lucide-react";
@@ -6,33 +6,61 @@ import { Menu } from "lucide-react";
 import { ChatWindow } from "../../components/chat/ChatWindow";
 import { Header } from "../../components/layout/Header";
 import { Sidebar } from "../../components/layout/Sidebar";
-import { streamQuestion, type Source } from "../../services/chat.service";
+import { streamQuestion } from "../../services/chat.service";
 import {
   createConversation,
+  getConversation,
   renameConversation,
   type Conversation,
 } from "../../services/conversation.service";
 import { getMessages, type Message } from "../../services/message.service";
+import { OPEN_CONVERSATION_KEY } from "../../utils/storageKeys";
 
 export function DashboardPage() {
   const [selectedConversation, setSelectedConversation] =
     useState<Conversation>();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [sources, setSources] = useState<Source[]>([]);
   const [loading, setLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
+
+  // A guest who just clicked "Try the demo" lands in their sample conversation.
+  useEffect(() => {
+    const raw = sessionStorage.getItem(OPEN_CONVERSATION_KEY);
+    if (!raw) return;
+    sessionStorage.removeItem(OPEN_CONVERSATION_KEY);
+
+    const conversationId = Number(raw);
+
+    async function openConversation() {
+      try {
+        const conversation = await getConversation(conversationId);
+        setSelectedConversation(conversation);
+        setMessages(await getMessages(conversationId));
+        setSidebarRefreshKey((current) => current + 1);
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    openConversation();
+  }, []);
 
   function handleNewChat() {
     setSelectedConversation(undefined);
     setMessages([]);
-    setSources([]);
+  }
+
+  function handleConversationDeleted(conversationId: number) {
+    if (selectedConversation?.id === conversationId) {
+      handleNewChat();
+    }
   }
 
   async function handleSelectConversation(conversation: Conversation) {
     setSelectedConversation(conversation);
-    setSources([]);
     setIsSidebarOpen(false);
 
     try {
@@ -53,15 +81,19 @@ export function DashboardPage() {
 
     setSelectedConversation(renamedConversation);
     setMessages([]);
-    setSources([]);
     setSidebarRefreshKey((current) => current + 1);
 
     return renamedConversation.id;
   }
 
+  function handleStop() {
+    abortRef.current?.abort();
+  }
+
   async function handleSend(question: string) {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setLoading(true);
-    setSources([]);
 
     try {
       let conversation = selectedConversation;
@@ -90,10 +122,13 @@ export function DashboardPage() {
 
       setMessages((current) => [...current, userMessage, assistantMessage]);
 
+      let sawTokens = false;
+
       await streamQuestion(
         conversation.id,
         question,
         (token) => {
+          sawTokens = true;
           setMessages((current) =>
             current.map((message) =>
               message.id === assistantMessage.id
@@ -105,14 +140,44 @@ export function DashboardPage() {
             )
           );
         },
-        setSources
+        (answerSources) => {
+          // The first event is the retrieved set, sent before any text. Only
+          // the one after the answer (the cited set) belongs under it.
+          if (!sawTokens) return;
+
+          setMessages((current) =>
+            current.map((message) =>
+              message.id === assistantMessage.id
+                ? { ...message, sources: answerSources }
+                : message
+            )
+          );
+        },
+        controller.signal
       );
 
       const updatedMessages = await getMessages(conversation.id);
       setMessages(updatedMessages);
     } catch (error) {
+      if (controller.signal.aborted) {
+        // User pressed Stop: keep the partial answer already on screen. The
+        // server saves it too, so it is there when the conversation reloads.
+        return;
+      }
+
       console.error(error);
       toast.error("Failed to stream response");
+      setMessages((current) =>
+        current.map((message) =>
+          message.role === "ASSISTANT" && message.content === ""
+            ? {
+                ...message,
+                content:
+                  "Sorry — something went wrong generating a response. Please try again.",
+              }
+            : message
+        )
+      );
     } finally {
       setLoading(false);
     }
@@ -127,6 +192,7 @@ export function DashboardPage() {
           onNewChat={handleNewChat}
           onCreateConversation={handleCreateConversationForUpload}
           onSelectConversation={handleSelectConversation}
+          onConversationDeleted={handleConversationDeleted}
         />
       </div>
 
@@ -148,6 +214,7 @@ export function DashboardPage() {
           onNewChat={handleNewChat}
           onCreateConversation={handleCreateConversationForUpload}
           onSelectConversation={handleSelectConversation}
+          onConversationDeleted={handleConversationDeleted}
           onClose={() => setIsSidebarOpen(false)}
         />
       </div>
@@ -175,7 +242,7 @@ export function DashboardPage() {
           messages={messages}
           disabled={loading}
           onSend={handleSend}
-          sources={sources}
+          onStop={handleStop}
         />
       </div>
     </div>
