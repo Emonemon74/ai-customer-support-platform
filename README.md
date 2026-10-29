@@ -12,10 +12,14 @@ feature: conversation-scoped data isolation with tests, a hybrid
 retrieval + reranking pipeline, an automated retrieval/answer evaluation
 harness with measured before/after numbers, and CI.
 
+> **Live demo:** _add your URL here after deploying_ — click **Try the demo**,
+> no signup. <!-- demo GIF: docs/demo.gif -->
+
 ---
 
 ## Contents
 
+- [Live demo](#live-demo)
 - [What it does](#what-it-does)
 - [Architecture](#architecture)
 - [Document ingestion](#document-ingestion)
@@ -36,9 +40,30 @@ harness with measured before/after numbers, and CI.
 
 ---
 
+## Live demo
+
+The login page has a **Try the demo — no signup** button. It creates a
+throw-away guest account and opens a conversation that already holds six sample
+support documents (billing policy, API reference, security guide, ...), so a visitor can ask a
+question and see a cited answer within seconds.
+
+Because it is public and calls a paid LLM, the demo is capped:
+
+| Guard | Default | Setting |
+| --- | --- | --- |
+| Questions per guest session | 30 (`429`) | `DEMO_MAX_MESSAGES` |
+| Upload size for guests | 2 MB | `DEMO_MAX_FILE_MB` |
+| Demo sessions per IP | 5 / minute | `RATE_LIMIT_DEMO_PER_MINUTE` |
+| Documents per user | 25 | `MAX_DOCUMENTS_PER_USER` |
+| Total questions per day, all users | `0` = off (`503` when hit) | `GLOBAL_DAILY_CHAT_LIMIT` |
+| Guest lifetime | 24 h, then the account, its conversations, documents and vectors are purged | `DEMO_USER_TTL_HOURS` |
+
+Guest sessions are enabled with `DEMO_ENABLED=true` (off by default). Expired
+guests are purged whenever a new demo session starts, so no scheduler is needed.
+
 ## What it does
 
-- **Accounts & conversations** — unified login/signup (JWT), plus create /
+- **Accounts & conversations** — register / login (JWT), plus create /
   search / rename / delete of conversations.
 - **Document upload** — PDFs are validated (magic-byte sniffing, not just the
   browser's `Content-Type`), stored, parsed page-by-page, chunked, embedded,
@@ -279,6 +304,8 @@ require `Authorization: Bearer <token>`.
 | `GET` | `/health` | Health check |
 | `POST` | `/auth/register` | Create account (`full_name`, `email`, `password` ≥ 8) → `201 { access_token }`; `409` if the email exists |
 | `POST` | `/auth/login` | `{ email, password }` → `{ access_token }`; `401` for any bad credential (same message for unknown email) |
+| `POST` | `/auth/demo` | Start a guest session → `201 { access_token, conversation_id }`; `404` unless `DEMO_ENABLED` |
+| `GET` | `/config` | Public settings the UI needs: `demo_enabled`, `demo_max_messages`, `demo_ttl_hours` |
 | `GET` | `/users/me` | Current user |
 | `POST` | `/conversations` | Create conversation (title auto-generated) |
 | `GET` | `/conversations` | List the caller's conversations |
@@ -373,6 +400,12 @@ in-memory SQLite database.
 | `RATE_LIMIT_ENABLED` | no | `true` | per-IP fixed-window limiting |
 | `RATE_LIMIT_AUTH_PER_MINUTE` | no | `10` | auth endpoint budget |
 | `RATE_LIMIT_CHAT_PER_MINUTE` | no | `30` | chat endpoint budget |
+| `DEMO_ENABLED` | no | `false` | enable the no-signup guest demo |
+| `DEMO_MAX_MESSAGES` | no | `30` | questions per guest |
+| `DEMO_USER_TTL_HOURS` | no | `24` | guest lifetime before purge |
+| `DEMO_MAX_FILE_MB` | no | `2` | guest upload cap |
+| `MAX_DOCUMENTS_PER_USER` | no | `25` | per-user document cap |
+| `GLOBAL_DAILY_CHAT_LIMIT` | no | `0` (off) | total questions per day across all users |
 | `RETRIEVAL_*` | no | see table above | retrieval tuning |
 
 `frontend/.env`: `VITE_API_BASE_URL` — the backend origin only (API paths are
@@ -448,7 +481,7 @@ the cost, not warranted yet.
 
 - [x] Dockerfiles + `docker-compose` (managed Postgres, persistent volume for
       `chroma_db`)
-- [ ] Deploy to AWS
+- [ ] Deploy to AWS (Terraform + SSM-based CD are ready; needs `terraform apply`)
 - [x] Asynchronous ingestion (queue + worker) so large PDFs don't block upload
 - [x] Structured request logging with request/user/conversation ids and
       retrieval/LLM latency, plus a `/metrics` snapshot
