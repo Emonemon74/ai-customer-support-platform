@@ -24,13 +24,15 @@ data "aws_subnets" "default" {
   }
 }
 
+# The standard image only: "al2023-ami-*-x86_64" also matches the minimal image,
+# which ships without the SSM agent the CD pipeline deploys through.
 data "aws_ami" "al2023" {
   most_recent = true
   owners      = ["amazon"]
 
   filter {
     name   = "name"
-    values = ["al2023-ami-*-x86_64"]
+    values = ["al2023-ami-2023.*-x86_64"]
   }
   filter {
     name   = "virtualization-type"
